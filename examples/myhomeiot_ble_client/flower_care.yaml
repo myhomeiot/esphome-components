@@ -1,0 +1,52 @@
+substitutions:
+  living_room_flower_care_mac: !secret living_room_flower_care_mac
+  living_room_flower_care_name_prefix: Living Room Flower Care
+  living_room_flower_care_id_prefix: living_room_flower_care
+
+esp32_ble_tracker:
+
+myhomeiot_ble_host:
+
+myhomeiot_ble_client:
+  - mac_address: ${living_room_flower_care_mac}
+    service_uuid: '1204'
+    characteristic_uuid: '1A02'
+    update_interval: 24h
+    on_value:
+      then:
+        lambda: |-
+          if (x.size() < 2)
+          {
+            ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
+            return;
+          };
+          id(${living_room_flower_care_id_prefix}_battery_level).publish_state(x[0]);
+
+          std::string firmware(x.begin(), x.end());
+          id(${living_room_flower_care_id_prefix}_firmware).publish_state(firmware.substr(2));
+
+sensor:
+  - platform: xiaomi_hhccjcy01
+    mac_address: ${living_room_flower_care_mac}
+    temperature:
+      name: ${living_room_flower_care_name_prefix} Temperature
+    moisture:
+      name: ${living_room_flower_care_name_prefix} Moisture
+    illuminance:
+      name: ${living_room_flower_care_name_prefix} Illuminance
+    conductivity:
+      name: ${living_room_flower_care_name_prefix} Conductivity
+
+  - platform: template
+    id: ${living_room_flower_care_id_prefix}_battery_level
+    name: ${living_room_flower_care_name_prefix} Battery Level
+    device_class: battery
+    unit_of_measurement: '%'
+    state_class: measurement
+    accuracy_decimals: 0
+
+text_sensor:
+  - platform: template
+    id: ${living_room_flower_care_id_prefix}_firmware
+    name: ${living_room_flower_care_name_prefix} Firmware
+    icon: mdi:new-box

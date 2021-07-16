@@ -1,0 +1,17 @@
+/.esphome/
+**/.pioenvs/
+**/.piolibdeps/
+**/src/
+**/lib/
+**/platformio.ini
+**/partitions.csv
+
+*.pyc
+
+/secrets.yaml
+
+/esphome
+/.pio
+
+/.vscode/
+
