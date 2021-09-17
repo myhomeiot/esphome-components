@@ -31,13 +31,12 @@ void MyHomeIOT_BLEClient::loop() {
 
 void MyHomeIOT_BLEClient::connect() {
   ESP_LOGI(TAG, "[%s] Connecting", to_string(this->address).c_str());
+  this->state_ = esp32_ble_tracker::ClientState::Connecting;
   if (auto status = esp_ble_gattc_open(ble_host_->gattc_if, this->remote_bda, BLE_ADDR_TYPE_PUBLIC, true))
   {
     ESP_LOGW(TAG, "[%s] open error, status (%d)", to_string(this->address).c_str(), status);
     report_error(esp32_ble_tracker::ClientState::Idle);
   }
-  else
-    this->state_ = esp32_ble_tracker::ClientState::Connecting;
 }
 
 void MyHomeIOT_BLEClient::disconnect() {
@@ -108,7 +107,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
         break;
       }
       ESP_LOGV(TAG, "[%s] CFG_MTU_EVT, MTU (%d)", to_string(this->address).c_str(), param->cfg_mtu.mtu);
-      if (auto status = esp_ble_gattc_search_service(esp_gattc_if, param->cfg_mtu.conn_id, NULL)) {
+      if (auto status = esp_ble_gattc_search_service(esp_gattc_if, param->cfg_mtu.conn_id, nullptr)) {
         ESP_LOGW(TAG, "[%s] search_service failed, status (%d)", to_string(this->address).c_str(), status);
         report_error();
       }
@@ -173,7 +172,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
             this->char_handle, ESP_GATT_AUTH_REQ_NONE) != ESP_GATT_OK) {
             ESP_LOGW(TAG, "[%s] read_char error sending read request, status (%d)",
               to_string(this->address).c_str(), status);
-            this->char_handle = 0;
+            this->char_handle = ESP_GATT_ILLEGAL_HANDLE;
           }
           break;
         }
