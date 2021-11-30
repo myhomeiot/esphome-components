@@ -5,6 +5,26 @@
 
 #ifdef ARDUINO_ARCH_ESP32
 
+#include "esphome/core/version.h"
+#if __has_include("esphome/core/macros.h")
+#include "esphome/core/macros.h" // VERSION_CODE
+#else
+#define VERSION_CODE(major, minor, patch) ((major) << 16 | (minor) << 8 | (patch))
+#endif
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2021, 10, 0)
+#define MYHOMEIOT_IDLE esp32_ble_tracker::ClientState::IDLE
+#define MYHOMEIOT_DISCOVERED esp32_ble_tracker::ClientState::DISCOVERED
+#define MYHOMEIOT_CONNECTING esp32_ble_tracker::ClientState::CONNECTING
+#define MYHOMEIOT_CONNECTED esp32_ble_tracker::ClientState::CONNECTED
+#define MYHOMEIOT_ESTABLISHED esp32_ble_tracker::ClientState::ESTABLISHED
+#else
+#define MYHOMEIOT_IDLE esp32_ble_tracker::ClientState::Idle
+#define MYHOMEIOT_DISCOVERED esp32_ble_tracker::ClientState::Discovered
+#define MYHOMEIOT_CONNECTING esp32_ble_tracker::ClientState::Connecting
+#define MYHOMEIOT_CONNECTED esp32_ble_tracker::ClientState::Connected
+#define MYHOMEIOT_ESTABLISHED esp32_ble_tracker::ClientState::Established
+#endif
+
 namespace esphome {
 namespace myhomeiot_ble_host {
 
@@ -26,6 +46,7 @@ class MyHomeIOT_BLEClientNode {
 
 class MyHomeIOT_BLEHost : public Component, public esp32_ble_tracker::ESPBTClient {
  public:
+  float get_setup_priority() const override { return setup_priority::AFTER_BLUETOOTH; }
   void setup() override;
   void dump_config() override;
   void loop() override;
@@ -38,7 +59,8 @@ class MyHomeIOT_BLEHost : public Component, public esp32_ble_tracker::ESPBTClien
 
   int gattc_if;
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
-  void gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+  void gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
+                           esp_ble_gattc_cb_param_t *param) override;
   void on_scan_end() override {}
 
  protected:

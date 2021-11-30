@@ -8,7 +8,7 @@
 namespace esphome {
 namespace myhomeiot_ble_host {
 
-static const char *TAG = "myhomeiot_ble_host";
+static const char *const TAG = "myhomeiot_ble_host";
 
 void MyHomeIOT_BLEHost::setup() {
   auto status = esp_ble_gattc_app_register(this->app_id);
@@ -16,7 +16,7 @@ void MyHomeIOT_BLEHost::setup() {
     ESP_LOGE(TAG, "app_register failed, app_id (%d) status (%d)", this->app_id, status);
     this->mark_failed();
   }
-  this->set_state(esp32_ble_tracker::ClientState::Idle);
+  this->set_state(MYHOMEIOT_IDLE);
 }
 
 void MyHomeIOT_BLEHost::dump_config() {
@@ -30,7 +30,7 @@ void MyHomeIOT_BLEHost::loop() {
     if (this->state() != current->state())
       this->set_state(current->state());
   }
-  if (this->state() == esp32_ble_tracker::ClientState::Idle)
+  if (this->state() == MYHOMEIOT_IDLE)
     current = nullptr;
 }
 

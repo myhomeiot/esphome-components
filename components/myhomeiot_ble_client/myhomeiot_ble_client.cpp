@@ -8,10 +8,10 @@
 namespace esphome {
 namespace myhomeiot_ble_client {
 
-static const char *TAG = "myhomeiot_ble_client";
+static const char *const TAG = "myhomeiot_ble_client";
 
 void MyHomeIOT_BLEClient::setup() {
-  this->state_ = esp32_ble_tracker::ClientState::Idle;
+  this->state_ = MYHOMEIOT_IDLE;
 }
 
 void MyHomeIOT_BLEClient::dump_config() {
@@ -23,25 +23,25 @@ void MyHomeIOT_BLEClient::dump_config() {
 }
 
 void MyHomeIOT_BLEClient::loop() {
-  if (this->state_ == esp32_ble_tracker::ClientState::Discovered)
+  if (this->state_ == MYHOMEIOT_DISCOVERED)
     this->connect();
-  else if (this->state_ == esp32_ble_tracker::ClientState::Established)
+  else if (this->state_ == MYHOMEIOT_ESTABLISHED)
     this->disconnect();
 }
 
 void MyHomeIOT_BLEClient::connect() {
   ESP_LOGI(TAG, "[%s] Connecting", to_string(this->address).c_str());
-  this->state_ = esp32_ble_tracker::ClientState::Connecting;
+  this->state_ = MYHOMEIOT_CONNECTING;
   if (auto status = esp_ble_gattc_open(ble_host_->gattc_if, this->remote_bda, BLE_ADDR_TYPE_PUBLIC, true))
   {
     ESP_LOGW(TAG, "[%s] open error, status (%d)", to_string(this->address).c_str(), status);
-    report_error(esp32_ble_tracker::ClientState::Idle);
+    report_error(MYHOMEIOT_IDLE);
   }
 }
 
 void MyHomeIOT_BLEClient::disconnect() {
   ESP_LOGI(TAG, "[%s] Disconnecting", to_string(this->address).c_str());
-  this->state_ = esp32_ble_tracker::ClientState::Idle;
+  this->state_ = MYHOMEIOT_IDLE;
   if (auto status = esp_ble_gattc_close(ble_host_->gattc_if, this->conn_id))
     ESP_LOGW(TAG, "[%s] close error, status (%d)", to_string(this->address).c_str(), status);
 }
@@ -63,13 +63,13 @@ void MyHomeIOT_BLEClient::report_error(esp32_ble_tracker::ClientState state) {
 }
 
 bool MyHomeIOT_BLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  if (!this->is_update_requested || this->state_ != esp32_ble_tracker::ClientState::Idle
+  if (!this->is_update_requested || this->state_ != MYHOMEIOT_IDLE
     || device.address_uint64() != this->address)
     return false;
 
   ESP_LOGD(TAG, "[%s] Found device", device.address_str().c_str());
   memcpy(this->remote_bda, device.address(), sizeof(this->remote_bda));
-  this->state_ = esp32_ble_tracker::ClientState::Discovered;
+  this->state_ = MYHOMEIOT_DISCOVERED;
   return true;
 }
 
@@ -82,7 +82,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       if (param->open.status != ESP_GATT_OK) {
         ESP_LOGW(TAG, "[%s] OPEN_EVT failed, status (%d), app_id (%d)", to_string(this->address).c_str(),
           param->open.status, ble_host_->app_id);
-        report_error(esp32_ble_tracker::ClientState::Idle);
+        report_error(MYHOMEIOT_IDLE);
         break;
       }
       ESP_LOGI(TAG, "[%s] Connected successfully, app_id (%d)", to_string(this->address).c_str(), ble_host_->app_id);
@@ -94,7 +94,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
         break;
       }
       this->start_handle = this->end_handle = this->char_handle = ESP_GATT_ILLEGAL_HANDLE;
-      this->state_ = esp32_ble_tracker::ClientState::Connected;
+      this->state_ = MYHOMEIOT_CONNECTED;
       break;
     }
     case ESP_GATTC_CFG_MTU_EVT: {
@@ -117,7 +117,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       if (memcmp(param->disconnect.remote_bda, this->remote_bda, sizeof(this->remote_bda)) != 0)
         break;
       ESP_LOGD(TAG, "[%s] DISCONNECT_EVT", to_string(this->address).c_str());
-      this->state_ = esp32_ble_tracker::ClientState::Idle;
+      this->state_ = MYHOMEIOT_IDLE;
       break;
     }
     case ESP_GATTC_SEARCH_RES_EVT: {
@@ -198,7 +198,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       }
 
       report_results(param->read.value, param->read.value_len);
-      this->state_ = esp32_ble_tracker::ClientState::Established;
+      this->state_ = MYHOMEIOT_ESTABLISHED;
       break;
     }
     default:

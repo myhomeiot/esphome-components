@@ -32,13 +32,11 @@ BLE_CLIENT_SCHEMA = cv.Schema(
     }
 )
 
-@coroutine
-def register_ble_client(var, config):
-    parent = yield cg.get_variable(config[CONF_BLE_HOST_ID])
+async def register_ble_client(var, config):
+    parent = await cg.get_variable(config[CONF_BLE_HOST_ID])
     cg.add(parent.register_ble_client(var))
 
-def to_code(config):
+async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-
-    yield cg.register_component(var, config)
-    yield esp32_ble_tracker.register_client(var, config)
+    await cg.register_component(var, config)
+    await esp32_ble_tracker.register_client(var, config)

@@ -49,7 +49,7 @@ class MyHomeIOT_BLEClient : public PollingComponent, public myhomeiot_ble_host::
   void disconnect();
   void update() override;
   void report_results(uint8_t *data, uint16_t len);
-  void report_error(esp32_ble_tracker::ClientState state = esp32_ble_tracker::ClientState::Established);
+  void report_error(esp32_ble_tracker::ClientState state = MYHOMEIOT_ESTABLISHED);
 };
 
 }  // namespace myhomeiot_ble_client

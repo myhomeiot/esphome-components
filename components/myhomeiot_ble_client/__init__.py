@@ -50,7 +50,7 @@ CONFIG_SCHEMA = (
 def versiontuple(v):
     return tuple(map(int, (v.split("."))))
 
-def to_code(config):
+async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
 
     reversed = versiontuple(const.__version__) >= versiontuple("2021.9.0")
@@ -70,10 +70,10 @@ def to_code(config):
         uuid128 = esp32_ble_tracker.as_reversed_hex_array(config[CONF_CHARACTERISTIC_UUID]) if reversed else esp32_ble_tracker.as_hex_array(config[CONF_CHARACTERISTIC_UUID])
         cg.add(var.set_char_uuid128(uuid128))
 
-    yield cg.register_component(var, config)
-    yield myhomeiot_ble_host.register_ble_client(var, config)
+    await cg.register_component(var, config)
+    await myhomeiot_ble_host.register_ble_client(var, config)
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
 
     for conf in config.get(CONF_ON_VALUE, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-        yield automation.build_automation(trigger, [(cg.std_vector.template(cg.uint8), "x")], conf)
+        await automation.build_automation(trigger, [(cg.std_vector.template(cg.uint8), "x")], conf)
