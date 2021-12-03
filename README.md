@@ -32,7 +32,9 @@ BLE Gateway component will allow you to forward BLE Advertising data packets for
 
 If the heart of your Home Automation system is Home Assistant or another similar system and you use [ESPHome](https://esphome.io) devices to extend BLE coverage and process data from BLE sensors, you can dramatically decrease system complexity by remove all BLE data processing from ESPHome devices and forward raw BLE Advertising data to external components like [Passive BLE Monitor](https://github.com/custom-components/ble_monitor).
 
-**Important note:** Currently in order to run BLE Gateway you need to make some changes in ESPHome `esp32_ble_tracker` component and Passive BLE Monitor integration, but I will send PR to these components and hopefully they will be accepted.
+**Important note:** Currently in order to run BLE Gateway you need to make some changes in ESPHome `esp32_ble_tracker` component and Passive BLE Monitor integration, but I make PR's to these components and hopefully they will be accepted:
+- [ESPHome PR](https://github.com/esphome/esphome/pull/2854)
+- [Passive BLE Monitor PR](https://github.com/custom-components/ble_monitor/pull/572)
 
 #### ESPHome configuration example (with [event](https://esphome.io/components/api.html#homeassistant-event-action), you can use direct ble_monitor.parse_data [service call](https://esphome.io/components/api.html#homeassistant-service-action))
 ```yaml
