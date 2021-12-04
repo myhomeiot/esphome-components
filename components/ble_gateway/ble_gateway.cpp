@@ -3,35 +3,42 @@
 
 #ifdef USE_ESP32
 
-#include <sstream>
-#include <iomanip>
-
 namespace esphome {
 namespace ble_gateway {
 
+#define HCI_HEADER_LEN 14
+
 static const char *const TAG = "ble_gateway";
 
-// https://stackoverflow.com/questions/41633574/stdhex-and-stdsetw-not-working-with-some-characters
-// https://stackoverflow.com/questions/25713995/how-to-decode-a-bluetooth-le-package-frame-beacon-of-a-freetec-px-1737-919-b
 std::string scan_rst_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &param) {
-  std::stringstream ss;
+  const char *hex = "0123456789ABCDEF";
+  char buffer[(HCI_HEADER_LEN + ESP_BLE_ADV_DATA_LEN_MAX + ESP_BLE_SCAN_RSP_DATA_LEN_MAX + 1) * 2 + 1];
   uint8_t payload_size = param.adv_data_len + param.scan_rsp_len;
 
-  ss << std::uppercase << std::setfill('0') << std::hex;
+  if (payload_size > ESP_BLE_ADV_DATA_LEN_MAX + ESP_BLE_SCAN_RSP_DATA_LEN_MAX) {
+    ESP_LOGE(TAG, "Payload size (%d) bigger than maximum (%d)", payload_size,
+      ESP_BLE_ADV_DATA_LEN_MAX + ESP_BLE_SCAN_RSP_DATA_LEN_MAX);
+    return "";
+  }
 
-  ss << "043E"; // HCI Packet Type: HCI Event (0x04), Event Code: LE Meta (0x3E)
-  ss << std::setw(2) << (int)(unsigned char) (11 + payload_size + 1); // Total Length
-  ss << "0201"; // Sub Event: LE Advertising Report (0x02), Num Reports (0x01)
-  ss << std::setw(2) << (int)(unsigned char) param.ble_evt_type; // Event Type
-  ss << std::setw(2) << (int)(unsigned char) param.ble_addr_type; // Peer Address Type
-  for (int i = ESP_BD_ADDR_LEN - 1; i >= 0; i--)
-    ss << std::setw(2) << (int)(unsigned char) param.bda[i];
-  ss << std::setw(2) << (int)(unsigned char) payload_size;
-  for (int i = 0; i < payload_size; i++)
-    ss << std::setw(2) << (int)(unsigned char) param.ble_adv[i];
-  ss << std::setw(2) << (int)(unsigned char) param.rssi;
+  // HCI Packet Type: HCI Event (0x04), Event Code: LE Meta (0x3E)
+  // Sub Event: LE Advertising Report (0x02), Num Reports (0x01)
+  snprintf(buffer, sizeof(buffer), "043E%02X0201%02X%02X%02X%02X%02X%02X%02X%02X%02X%*s%02X",
+    11 + payload_size + 1, // Total Length
+    param.ble_evt_type, // Event Type
+    param.ble_addr_type, // Address Type
+    param.bda[5], param.bda[4], param.bda[3], param.bda[2], param.bda[1], param.bda[0], 
+    payload_size,
+    payload_size * 2, "", // Payload filler
+    (uint8_t) param.rssi
+  );
 
-  return ss.str();
+  char *dest = &buffer[HCI_HEADER_LEN * 2];
+  for (int i = 0; i < payload_size; i++) {
+    *dest++ = hex[param.ble_adv[i] >> 4];
+    *dest++ = hex[param.ble_adv[i] & 0x0F];
+  }
+  return buffer;
 }
 
 std::string mac_address_to_string(uint64_t address) {
