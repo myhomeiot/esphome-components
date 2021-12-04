@@ -50,19 +50,24 @@ std::string mac_address_to_string(uint64_t address) {
 
 void BLEGateway::dump_config() {
   ESP_LOGCONFIG(TAG, "BLE Gateway Devices:");
-  for (auto *device : this->devices_)
-    ESP_LOGCONFIG(TAG, "  MAC address: %s", mac_address_to_string(device->address_).c_str());
+  for (auto device : this->devices_)
+    ESP_LOGCONFIG(TAG, "  MAC address: %s", mac_address_to_string(device).c_str());
 }
 
 bool BLEGateway::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  for (auto *x : this->devices_)
-    if (device.address_uint64() == x->address_) {
-      auto packet = scan_rst_to_hci_packet_hex(device.get_scan_rst());
-      ESP_LOGD(TAG, "[%s] Packet %s", mac_address_to_string(x->address_).c_str(), packet.c_str());
-      this->callback_.call(device, packet);
-      break;
-    }
+  if (std::find(this->devices_.begin(), this->devices_.end(), device.address_uint64()) != this->devices_.end()) {
+    auto packet = scan_rst_to_hci_packet_hex(device.get_scan_rst());
+    ESP_LOGD(TAG, "[%s] Packet %s", mac_address_to_string(device.address_uint64()).c_str(), packet.c_str());
+    this->callback_.call(device, packet);
+  }
   return false;
+}
+
+void BLEGateway::register_device(uint64_t device) {
+  if (std::find(this->devices_.begin(), this->devices_.end(), device) == this->devices_.end())
+    this->devices_.push_back(device);
+  else
+    ESP_LOGW(TAG, "Device with MAC address (%s) already exists", mac_address_to_string(device).c_str());
 }
 
 }  // namespace ble_gateway

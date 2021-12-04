@@ -52,7 +52,7 @@ async def to_code(config):
     await esp32_ble_tracker.register_ble_device(var, config)
 
     for conf in config[CONF_DEVICES]:
-        cg.add(var.register_device(cg.new_Pvariable(conf[CONF_ID], conf[CONF_MAC_ADDRESS].as_hex)))
+        cg.add(var.register_device(cg.new_Pvariable(conf[CONF_ID], conf[CONF_MAC_ADDRESS].as_hex).address))
 
     for conf in config.get(CONF_ON_BLE_ADVERTISE):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
