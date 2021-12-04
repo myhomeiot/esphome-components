@@ -24,17 +24,18 @@ class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListen
 
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
-  void add_callback(std::function<void(std::string)> &&callback) { this->callback_.add(std::move(callback)); }
+  void add_callback(std::function<void(const esp32_ble_tracker::ESPBTDevice &, std::string)> &&callback) { this->callback_.add(std::move(callback)); }
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
  protected:
   std::vector<BLEGatewayDevice *> devices_;
-  CallbackManager<void(std::string)> callback_;
+  CallbackManager<void(const esp32_ble_tracker::ESPBTDevice &, std::string)> callback_;
 };
 
-class BLEGatewayBLEAdvertiseTrigger : public Trigger<std::string> {
+class BLEGatewayBLEAdvertiseTrigger : public Trigger<const esp32_ble_tracker::ESPBTDevice &, std::string> {
  public:
   explicit BLEGatewayBLEAdvertiseTrigger(BLEGateway *parent) {
-    parent->add_callback([this](std::string value) { this->trigger(value); });
+   parent->add_callback([this](const esp32_ble_tracker::ESPBTDevice &value, std::string packet) {
+    this->trigger(value, packet); });
   }
 };
 

@@ -59,7 +59,7 @@ bool BLEGateway::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     if (device.address_uint64() == x->address_) {
       auto packet = scan_rst_to_hci_packet_hex(device.get_scan_rst());
       ESP_LOGD(TAG, "[%s] Packet %s", mac_address_to_string(x->address_).c_str(), packet.c_str());
-      this->callback_.call(packet);
+      this->callback_.call(device, packet);
       break;
     }
   return false;
