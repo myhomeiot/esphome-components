@@ -77,7 +77,8 @@ automation:
 ```
 
 #### Advanced configuration where ESPHome devices gets MAC addresses from Passive BLE Monitor configuration
-None: Be sure that you turn **on** the `input_boolean.settings_ble_gateway` if you want to receive BLE packets from BLE Gateway's.
+Note: Be sure that you turn **on** the `input_boolean.settings_ble_gateway` if you want to receive BLE packets from BLE Gateway's.
+
 **Important note:** New device address will be populated to ESPHome devices only after Passive BLE Monitor receives first BLE packet and creates entities for it. If in your configuration you don't have BLE stick and you have only ESPHome devices, you will need to add this device MAC address manually into the `input_text.settings_ble_gateway_add_device`. After Passive BLE Monitor creates entities for new device, you can remove address.
 ```yaml
 # ESPHome
