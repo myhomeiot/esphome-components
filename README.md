@@ -32,11 +32,11 @@ BLE Gateway component will allow you to forward BLE Advertising data packets for
 
 If the heart of your Home Automation system is Home Assistant or another similar system and you use [ESPHome](https://esphome.io) devices to extend BLE coverage and process data from BLE sensors, you can dramatically decrease system complexity by remove all BLE data processing from ESPHome devices and forward raw BLE Advertising data to external components like [Passive BLE Monitor](https://github.com/custom-components/ble_monitor).
 
-**Important note:** Currently in order to run BLE Gateway you need to make some changes in ESPHome `esp32_ble_tracker` component and Passive BLE Monitor integration, but I make PR's to these components and hopefully they will be accepted:
-- [ESPHome PR](https://github.com/esphome/esphome/pull/2854)
-- [Passive BLE Monitor PR](https://github.com/custom-components/ble_monitor/pull/572)
+**Important note:** Currently in order to run BLE Gateway you need to make [some changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component, I make PR and hopefully it will be accepted.
+[Passive BLE Monitor](https://github.com/custom-components/ble_monitor) integration already has required support, thanks to [@Ernst79](https://github.com/Ernst79), please update it to version 6.2 or latest.
 
-#### ESPHome configuration example (with [event](https://esphome.io/components/api.html#homeassistant-event-action), you can use direct ble_monitor.parse_data [service call](https://esphome.io/components/api.html#homeassistant-service-action))
+#### ESPHome configuration example
+Note: This example use [event](https://esphome.io/components/api.html#homeassistant-event-action), you can use direct `ble_monitor.parse_data` [service call](https://esphome.io/components/api.html#homeassistant-service-action)
 ```yaml
 ble_gateway:
   devices:
@@ -50,7 +50,8 @@ ble_gateway:
             packet: !lambda return packet;
 ```
 
-#### Home Assistant Passive BLE Monitor configuration example (remove automation if you use direct ble_monitor.parse_data service call)
+#### Home Assistant Passive BLE Monitor configuration example
+Note: Remove automation if you use direct `ble_monitor.parse_data` service call
 ```yaml
 ble_monitor:
   discovery: false
@@ -73,4 +74,48 @@ automation:
       - service: ble_monitor.parse_data
         data:
           packet: "{{ trigger.event.data.packet }}"
+```
+
+#### Advanced configuration where ESPHome devices gets MAC addresses from Passive BLE Monitor configuration
+None: Be sure that you turn **on** the `input_boolean.settings_ble_gateway` if you want to receive BLE packets from BLE Gateway's.
+**Important note:** New device address will be populated to ESPHome devices only after Passive BLE Monitor receives first BLE packet and creates entities for it. If in your configuration you don't have BLE stick and you have only ESPHome devices, you will need to add this device MAC address manually into the `input_text.settings_ble_gateway_add_device`. After Passive BLE Monitor creates entities for new device, you can remove address.
+```yaml
+# ESPHome
+ble_gateway:
+  id: blegateway
+  on_ble_advertise:
+    then:
+      - homeassistant.event:
+          event: esphome.on_ble_advertise
+          data:
+            packet: !lambda return packet;
+
+text_sensor:
+  - platform: homeassistant
+    id: ble_gateway_devices
+    entity_id: binary_sensor.ble_gateway
+    attribute: devices
+    on_value:
+      then:
+        - lambda: id(blegateway).set_devices(x);
+
+# Home Assistant
+input_boolean:
+  settings_ble_gateway:
+    name: BLE Gateway
+    icon: mdi:bluetooth
+
+input_text:
+  settings_ble_gateway_add_device:
+    name: BLE Gateway Add Device
+    icon: mdi:bluetooth-connect
+    initial: ''
+
+template:
+  - binary_sensor:
+      - name: BLE Gateway
+        icon: mdi:bluetooth
+        state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
+        attributes:
+          devices: "{{ states.sensor | selectattr('entity_id', 'search', '^sensor.ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
 ```

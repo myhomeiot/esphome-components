@@ -10,6 +10,7 @@ namespace ble_gateway {
 
 static const char *const TAG = "ble_gateway";
 
+// https://stackoverflow.com/questions/25713995/how-to-decode-a-bluetooth-le-package-frame-beacon-of-a-freetec-px-1737-919-b
 std::string scan_rst_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &param) {
   const char *hex = "0123456789ABCDEF";
   char buffer[(HCI_HEADER_LEN + ESP_BLE_ADV_DATA_LEN_MAX + ESP_BLE_SCAN_RSP_DATA_LEN_MAX + 1) * 2 + 1];
@@ -49,7 +50,7 @@ std::string mac_address_to_string(uint64_t address) {
 }
 
 void BLEGateway::dump_config() {
-  ESP_LOGCONFIG(TAG, "BLE Gateway Devices:");
+  ESP_LOGCONFIG(TAG, "BLE Gateway (%d devices):", this->devices_.size());
   for (auto device : this->devices_)
     ESP_LOGCONFIG(TAG, "  MAC address: %s", mac_address_to_string(device).c_str());
 }
@@ -63,11 +64,28 @@ bool BLEGateway::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   return false;
 }
 
-void BLEGateway::register_device(uint64_t device) {
+void BLEGateway::add_device(uint64_t device) {
   if (std::find(this->devices_.begin(), this->devices_.end(), device) == this->devices_.end())
     this->devices_.push_back(device);
   else
     ESP_LOGW(TAG, "Device with MAC address (%s) already exists", mac_address_to_string(device).c_str());
+}
+
+void BLEGateway::set_devices(std::string devices) {
+  const char *s = devices.c_str();
+  int len = strlen(s);
+  ESP_LOGD(TAG, "set_devices: (%s)", s);
+
+  if (len % 12 == 0) {
+    this->devices_.clear();
+    for (int i = 0; i < len / 12; i++) {
+      uint64_t mac_address;
+      sscanf(&s[i * 12], "%12llx", &mac_address);
+      add_device(mac_address);
+    }
+  }
+  else
+    ESP_LOGE(TAG, "set_devices: Devices lengths (%d) must be a multiple of 12", len);
 }
 
 }  // namespace ble_gateway

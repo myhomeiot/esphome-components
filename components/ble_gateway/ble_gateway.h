@@ -12,12 +12,6 @@ namespace ble_gateway {
 
 std::string scan_rst_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &param);
 
-class BLEGatewayDevice {
- public:
-  BLEGatewayDevice(uint64_t address) { this->address = address; }
-  uint64_t address;
-};
-
 class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
  public:
   float get_setup_priority() const override { return setup_priority::DATA; }
@@ -25,9 +19,10 @@ class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListen
 
   void dump_config() override;
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
-  void register_device(uint64_t device);
+  void add_device(uint64_t device);
+  void set_devices(std::string devices);
  protected:
-  std::vector<uint64_t> devices_;
+  std::vector<uint64_t> devices_{};
   CallbackManager<void(const esp32_ble_tracker::ESPBTDevice &, std::string)> callback_;
 };
 

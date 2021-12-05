@@ -18,7 +18,6 @@ ble_gateway_ns = cg.esphome_ns.namespace("ble_gateway")
 BLEGateway = ble_gateway_ns.class_(
     "BLEGateway", esp32_ble_tracker.ESPBTDeviceListener, cg.Component
 )
-BLEGatewayDevice = ble_gateway_ns.class_("BLEGatewayDevice")
 
 # Triggers
 BLEGatewayBLEAdvertiseTrigger = ble_gateway_ns.class_(
@@ -28,10 +27,9 @@ BLEGatewayBLEAdvertiseTrigger = ble_gateway_ns.class_(
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BLEGateway),
-        cv.Required(CONF_DEVICES): cv.All(
+        cv.Optional(CONF_DEVICES): cv.All(
             cv.ensure_list(
                 {
-                    cv.GenerateID(): cv.declare_id(BLEGatewayDevice),
                     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
                 }
             ),
@@ -51,8 +49,8 @@ async def to_code(config):
     await cg.register_component(var, config)
     await esp32_ble_tracker.register_ble_device(var, config)
 
-    for conf in config[CONF_DEVICES]:
-        cg.add(var.register_device(cg.new_Pvariable(conf[CONF_ID], conf[CONF_MAC_ADDRESS].as_hex).address))
+    if config.get(CONF_DEVICES):
+      cg.add(var.set_devices("".join(f"{str(conf[CONF_MAC_ADDRESS]).replace(':', '')}" for conf in config[CONF_DEVICES])))
 
     for conf in config.get(CONF_ON_BLE_ADVERTISE):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
