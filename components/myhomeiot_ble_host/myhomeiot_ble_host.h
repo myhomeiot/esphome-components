@@ -1,9 +1,9 @@
 #pragma once
 
+#ifdef ARDUINO_ARCH_ESP32
+
 #include "esphome/core/component.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
-
-#ifdef ARDUINO_ARCH_ESP32
 
 #include "esphome/core/version.h"
 #if __has_include("esphome/core/macros.h")

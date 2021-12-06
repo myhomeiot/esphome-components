@@ -1,10 +1,9 @@
 #pragma once
 
-#include "esphome/core/component.h"
-#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
-
 #ifdef USE_ESP32
 
+#include "esphome/core/component.h"
+#include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
 #include "esphome/core/automation.h"
 
 namespace esphome {
@@ -23,7 +22,7 @@ class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListen
   void set_devices(std::string devices);
  protected:
   std::vector<uint64_t> devices_{};
-  CallbackManager<void(const esp32_ble_tracker::ESPBTDevice &, std::string)> callback_;
+  CallbackManager<void(const esp32_ble_tracker::ESPBTDevice &, std::string)> callback_{};
 };
 
 class BLEGatewayBLEAdvertiseTrigger : public Trigger<const esp32_ble_tracker::ESPBTDevice &, std::string> {

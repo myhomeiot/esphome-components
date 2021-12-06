@@ -1,0 +1,29 @@
+substitutions:
+  flower_care_mac: !secret living_room_flower_care_mac
+
+esp32_ble_tracker:
+
+myhomeiot_ble_host:
+
+myhomeiot_ble_client:
+  - mac_address: ${flower_care_mac}
+    service_uuid: '1204'
+    characteristic_uuid: '1A02'
+    update_interval: 24h
+    on_value:
+      then:
+        homeassistant.event:
+          event: esphome.on_ble_advertise
+          data:
+            packet: !lambda |-
+              if (x.size() < 2)
+              {
+                ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
+                return "";
+              };
+              ESP_LOGI("myhomeiot_ble_client", "Battery (%d%%), firmware (%s)", x[0], std::string(x.begin(), x.end()).substr(2).c_str());
+              char buffer[70 + 1];
+              const uint8_t *remote_bda = xthis.remote_bda();
+              snprintf(buffer, sizeof(buffer), "043E2002010000%02X%02X%02X%02X%02X%02X14020106030295FE0C1695FE41209800000A1001%02X00",
+                remote_bda[5], remote_bda[4], remote_bda[3], remote_bda[2], remote_bda[1], remote_bda[0], x[0]);
+              return std::string(buffer).c_str();

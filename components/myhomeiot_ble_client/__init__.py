@@ -21,6 +21,7 @@ myhomeiot_ble_client_ns = cg.esphome_ns.namespace("myhomeiot_ble_client")
 MyHomeIOT_BLEClient = myhomeiot_ble_client_ns.class_(
     "MyHomeIOT_BLEClient", cg.Component
 )
+MyHomeIOT_BLEClientConstRef = MyHomeIOT_BLEClient.operator("ref").operator("const")
 
 # Triggers
 MyHomeIOT_BLEClientValueTrigger = myhomeiot_ble_client_ns.class_(
@@ -76,4 +77,4 @@ async def to_code(config):
 
     for conf in config.get(CONF_ON_VALUE, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
-        await automation.build_automation(trigger, [(cg.std_vector.template(cg.uint8), "x")], conf)
+        await automation.build_automation(trigger, [(cg.std_vector.template(cg.uint8), "x"), (MyHomeIOT_BLEClientConstRef, "xthis")], conf)

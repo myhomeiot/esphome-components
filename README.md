@@ -33,7 +33,7 @@ BLE Gateway component will allow you to forward BLE Advertising data packets for
 If the heart of your Home Automation system is Home Assistant or another similar system and you use [ESPHome](https://esphome.io) devices to extend BLE coverage and process data from BLE sensors, you can dramatically decrease system complexity by remove all BLE data processing from ESPHome devices and forward raw BLE Advertising data to external components like [Passive BLE Monitor](https://github.com/custom-components/ble_monitor).
 
 **Important note:** Currently in order to run BLE Gateway you need to make [some changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component, I make PR and hopefully it will be accepted.
-[Passive BLE Monitor](https://github.com/custom-components/ble_monitor) integration already has required support, thanks to [@Ernst79](https://github.com/Ernst79), please update it to version 6.2 or latest.
+[Passive BLE Monitor](https://github.com/custom-components/ble_monitor) integration already has required support, thanks to [@Ernst79](https://github.com/Ernst79), please update it to version 6.2 or later.
 
 #### ESPHome configuration example
 Note: This example use [event](https://esphome.io/components/api.html#homeassistant-event-action), you can use direct `ble_monitor.parse_data` [service call](https://esphome.io/components/api.html#homeassistant-service-action)
@@ -44,10 +44,10 @@ ble_gateway:
     - mac_address: !secret lywsd03mmc_mac
   on_ble_advertise:
     then:
-      - homeassistant.event:
-          event: esphome.on_ble_advertise
-          data:
-            packet: !lambda return packet;
+      homeassistant.event:
+        event: esphome.on_ble_advertise
+        data:
+          packet: !lambda return packet;
 ```
 
 #### Home Assistant Passive BLE Monitor configuration example
@@ -86,10 +86,10 @@ ble_gateway:
   id: blegateway
   on_ble_advertise:
     then:
-      - homeassistant.event:
-          event: esphome.on_ble_advertise
-          data:
-            packet: !lambda return packet;
+      homeassistant.event:
+        event: esphome.on_ble_advertise
+        data:
+          packet: !lambda return packet;
 
 text_sensor:
   - platform: homeassistant
@@ -98,7 +98,7 @@ text_sensor:
     attribute: devices
     on_value:
       then:
-        - lambda: id(blegateway).set_devices(x);
+        lambda: id(blegateway).set_devices(x);
 
 # Home Assistant
 input_boolean:

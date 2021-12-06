@@ -1,9 +1,8 @@
-#include "myhomeiot_ble_host.h"
-#include "esphome/core/log.h"
-
 #ifdef ARDUINO_ARCH_ESP32
 
 #include <esp_gap_ble_api.h>
+#include "esphome/core/log.h"
+#include "myhomeiot_ble_host.h"
 
 namespace esphome {
 namespace myhomeiot_ble_host {

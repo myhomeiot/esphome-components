@@ -1,7 +1,7 @@
+#ifdef USE_ESP32
+
 #include "ble_gateway.h"
 #include "esphome/core/log.h"
-
-#ifdef USE_ESP32
 
 namespace esphome {
 namespace ble_gateway {
