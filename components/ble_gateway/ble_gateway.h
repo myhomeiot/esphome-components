@@ -9,7 +9,7 @@
 namespace esphome {
 namespace ble_gateway {
 
-std::string scan_rst_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &param);
+std::string scan_result_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &param);
 
 class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
  public:
