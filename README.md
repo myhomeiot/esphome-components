@@ -1,7 +1,10 @@
 # `ESPHome` components
 
 A collection of my ESPHome components.
+
 Please ⭐️ this repo if you find it useful.
+
+**If you have questions or problems with this components you can check [this](https://community.home-assistant.io/t/esphome-ble-gateway-and-other-ble-components) thread.**
 
 To use this repository you should confugure it inside your yaml-configuration:
 ```yaml
@@ -32,7 +35,15 @@ BLE Gateway component will allow you to forward BLE Advertising data packets for
 
 If the heart of your Home Automation system is Home Assistant or another similar system and you use [ESPHome](https://esphome.io) devices to extend BLE coverage and process data from BLE sensors, you can dramatically decrease system complexity by remove all BLE data processing from ESPHome devices and forward raw BLE Advertising data to external components like [Passive BLE Monitor](https://github.com/custom-components/ble_monitor).
 
-**Important note:** Currently in order to run BLE Gateway you need to make [some changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component, I make PR and hopefully it will be accepted.
+**Important note:** Currently in order to run BLE Gateway you need to make [some changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component.
+In order to apply this PR you can use following configuration:
+```yaml
+external_components:
+  - source: github://myhomeiot/esphome-components
+  - source: github://pr#2854
+    components: [esp32_ble_tracker]
+```
+
 [Passive BLE Monitor](https://github.com/custom-components/ble_monitor) integration already has required support, thanks to [@Ernst79](https://github.com/Ernst79), please update it to version 6.2 or later.
 
 #### ESPHome configuration example
