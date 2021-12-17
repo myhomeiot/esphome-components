@@ -1,6 +1,4 @@
-# BLE Passive Monitor doesn't create the battery sensor for HHCCJCY01,
-# you need to change his const.py and add battery sensor manually (see battery between illuminance and rssi):
-#    'HHCCJCY01'               : [["temperature", "moisture", "conductivity", "illuminance", "battery", "rssi"], [], []],
+# Required Passive BLE Monitor version 6.3 or later
 
 substitutions:
   flower_care_mac: !secret living_room_flower_care_mac
