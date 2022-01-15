@@ -1,0 +1,43 @@
+ble_monitor:
+  bt_interface: !secret ble_monitor_bt_interface_builtin
+  discovery: false
+  restore_state: true
+  decimals: 1
+  period: 300
+  devices:
+    - name: Living Room Thermo
+      mac: !secret living_room_thermo_mac
+      encryption_key: !secret living_room_thermo_mi_bind_key
+    - name: Living Room Flower Care
+      mac: !secret living_room_flower_care_mac
+
+input_boolean:
+  settings_ble_gateway:
+    name: BLE Gateway
+    icon: mdi:bluetooth
+
+input_text:
+  settings_ble_gateway_add_device:
+    name: BLE Gateway Add Device
+    icon: mdi:bluetooth-connect
+    initial: ''
+
+automation:
+  - alias: ESPHome BLE Advertise
+    mode: queued
+    trigger:
+      - platform: event
+        event_type: esphome.on_ble_advertise
+    action:
+      - service: ble_monitor.parse_data
+        data:
+          packet: "{{ trigger.event.data.packet }}"
+
+template:
+  - binary_sensor:
+      - name: BLE Gateway
+        icon: mdi:bluetooth
+        state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
+        availability: "{{ is_state('binary_sensor.ha_started', 'on') }}"
+        attributes:
+          devices: "{{ states.sensor | selectattr('entity_id', 'search', '^sensor.ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"

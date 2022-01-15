@@ -1,0 +1,23 @@
+# Enable Home Assistant API
+api:
+  reboot_timeout: 1h
+
+esp32_ble_tracker:
+
+ble_gateway:
+  id: blegateway
+  on_ble_advertise:
+    then:
+      homeassistant.event:
+        event: esphome.on_ble_advertise
+        data:
+          packet: !lambda return packet;
+
+text_sensor:
+  - platform: homeassistant
+    id: ble_gateway_devices
+    entity_id: binary_sensor.ble_gateway
+    attribute: devices
+    on_value:
+      then:
+        lambda: id(blegateway).set_devices(x);
