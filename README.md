@@ -4,7 +4,7 @@ A collection of my ESPHome components.
 
 Please ⭐️ this repo if you find it useful.
 
-**If you have questions or problems with this components you can check [this](https://community.home-assistant.io/t/esphome-ble-gateway-and-other-ble-components) thread.**
+**If you have questions or problems with this components you can check [this](https://community.home-assistant.io/t/esphome-ble-gateway-and-other-ble-components/367935) thread.**
 
 To use this repository you should confugure it inside your yaml-configuration:
 ```yaml
