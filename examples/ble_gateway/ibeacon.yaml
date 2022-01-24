@@ -1,0 +1,30 @@
+esp32_ble_tracker:
+  on_ble_advertise:
+    then:
+      - if:
+          condition:
+            lambda: |-
+              static const std::vector<esp32_ble_tracker::ESPBTUUID> uuids = {
+                esp32_ble_tracker::ESPBTUUID::from_raw("00000000-0000-0000-0000-000000000000"),
+                esp32_ble_tracker::ESPBTUUID::from_raw("00112233-4455-6677-8899-AABBCCDDEEFF"),
+                esp32_ble_tracker::ESPBTUUID::from_raw("74278BDA-B644-4520-8F0C-720EAF059935")
+              };
+
+              if (!x.get_ibeacon().has_value())
+                return false;
+              auto ibeacon = x.get_ibeacon().value();
+              auto bt_uuid = ibeacon.get_uuid().as_128bit().get_uuid();
+              std::reverse(bt_uuid.uuid.uuid128, bt_uuid.uuid.uuid128 + bt_uuid.len);
+              auto uuid = esp32_ble_tracker::ESPBTUUID::from_uuid (bt_uuid);
+              bool result = std::find(uuids.begin(), uuids.end(), uuid) != uuids.end();
+              if (result)
+                ESP_LOGW("iBeacon", "UUID: %s, major/minor: %u/%u, TX power: %d",
+                  uuid.to_string().c_str(), ibeacon.get_major(), ibeacon.get_minor(), ibeacon.get_signal_power());
+              else
+                ESP_LOGD("iBeacon", "UUID: %s", uuid.to_string().c_str());
+              return result;
+          then:
+            - homeassistant.event:
+                event: esphome.on_ble_advertise
+                data:
+                  packet: !lambda return ble_gateway::BLEGateway::scan_result_to_hci_packet_hex(x.get_scan_result());
