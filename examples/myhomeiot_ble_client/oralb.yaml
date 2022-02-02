@@ -21,6 +21,7 @@ myhomeiot_ble_client:
             return;
           };
           id(${oralb_toothbrush_id_prefix}_battery_level).publish_state(x[0]);
+          id(${oralb_toothbrush_id_prefix}_battery_voltage).publish_state((x[2] << 8 | x[1]) / 1000.0f);
 
 sensor:
   - platform: template
@@ -30,3 +31,11 @@ sensor:
     unit_of_measurement: '%'
     state_class: measurement
     accuracy_decimals: 0
+
+  - platform: template
+    id: ${oralb_toothbrush_id_prefix}_battery_voltage
+    name: ${oralb_toothbrush_name_prefix} Battery Voltage
+    device_class: voltage
+    unit_of_measurement: V
+    state_class: measurement
+    accuracy_decimals: 3
