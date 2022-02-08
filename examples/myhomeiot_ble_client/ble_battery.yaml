@@ -1,0 +1,27 @@
+substitutions:
+  device_mac: !secret device_mac
+  device_name_prefix: Device
+  device_id_prefix: device
+
+esp32_ble_tracker:
+
+myhomeiot_ble_host:
+
+myhomeiot_ble_client:
+  - mac_address: ${device_mac}
+    service_uuid: '180F'
+    characteristic_uuid: '2A19'
+    update_interval: 24h
+    on_value:
+      then:
+        lambda: |-
+          id(${device_id_prefix}_battery_level).publish_state(x[0]);
+
+sensor:
+  - platform: template
+    id: ${device_id_prefix}_battery_level
+    name: ${device_name_prefix} Battery Level
+    device_class: battery
+    unit_of_measurement: '%'
+    state_class: measurement
+    accuracy_decimals: 0
