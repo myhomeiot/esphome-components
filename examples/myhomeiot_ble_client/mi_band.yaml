@@ -4,13 +4,24 @@ substitutions:
   mi_band_id_prefix: mi_band
 
 esp32_ble_tracker:
+  on_ble_service_data_advertise:
+    - mac_address: ${mi_band_mac}
+      service_uuid: 'FEE0'
+      then:
+        - lambda: |-
+            if (x.size() != 4)
+            {
+              ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
+              return;
+            };
+            id(${mi_band_id_prefix}_steps).publish_state((uint32_t)(x[3] << 24) | (uint32_t)(x[2] << 16) | (uint32_t)(x[1] << 8) | (uint32_t)(x[0]));
 
 myhomeiot_ble_host:
 
 myhomeiot_ble_client:
   - mac_address: ${mi_band_mac}
     service_uuid: 'FEE0'
-    characteristic_uuid: '00000006-0000-3512-2118-0009AF100700' # Mi Band 2/3/4
+    characteristic_uuid: '00000006-0000-3512-2118-0009AF100700' # Mi Band 2/3/4/6
 #    characteristic_uuid: '0000FF0C-0000-1000-8000-00805F9B34FB' # Mi Band 1
     update_interval: 6h
     on_value:
@@ -27,7 +38,7 @@ myhomeiot_ble_client:
             id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(mktime(&c_tm));
             break;
           }
-          case 20: { // Mi Band 2/3/4
+          case 20: { // Mi Band 2/3/4/6
             if (x[0] != 0x0F)
             {
               ESP_LOGE("myhomeiot_ble_client", "payload has wrong signature (0x%02X)", x[0]);
@@ -77,5 +88,13 @@ sensor:
     id: ${mi_band_id_prefix}_last_charging_timestamp
     name: ${mi_band_name_prefix} Last Charging Timestamp
     device_class: timestamp
+    state_class: measurement
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ${mi_band_id_prefix}_steps
+    name: ${mi_band_name_prefix} Steps
+    icon: mdi:walk
+    unit_of_measurement: steps
     state_class: measurement
     accuracy_decimals: 0
