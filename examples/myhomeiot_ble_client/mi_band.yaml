@@ -45,10 +45,14 @@ myhomeiot_ble_client:
               return;
             };
             id(${mi_band_id_prefix}_battery_level).publish_state(x[1]);
+            id(${mi_band_id_prefix}_battery_level_last_charging).publish_state(x[19]);
             id(${mi_band_id_prefix}_battery_state).publish_state(x[2] == 1);
 
             struct tm c_tm = {x[17], x[16], x[15], x[14], x[13] - 1, (uint16_t) (x[12] << 8 | x[11]) - 1900, 0, 0, -1};
             id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(mktime(&c_tm));
+
+            c_tm = {x[9], x[8], x[7], x[6], x[5] - 1, (uint16_t) (x[4] << 8 | x[3]) - 1900, 0, 0, -1};
+            id(${mi_band_id_prefix}_full_charging_timestamp).publish_state(mktime(&c_tm));
             break;
           };
           default:
@@ -85,8 +89,23 @@ sensor:
     accuracy_decimals: 0
 
   - platform: template
+    id: ${mi_band_id_prefix}_battery_level_last_charging
+    name: ${mi_band_name_prefix} Battery Level Last Charging
+    device_class: battery
+    unit_of_measurement: '%'
+    state_class: measurement
+    accuracy_decimals: 0
+
+  - platform: template
     id: ${mi_band_id_prefix}_last_charging_timestamp
     name: ${mi_band_name_prefix} Last Charging Timestamp
+    device_class: timestamp
+    state_class: measurement
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ${mi_band_id_prefix}_full_charging_timestamp
+    name: ${mi_band_name_prefix} Full Charging Timestamp
     device_class: timestamp
     state_class: measurement
     accuracy_decimals: 0
