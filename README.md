@@ -40,7 +40,7 @@ If the heart of your Home Automation system is Home Assistant or another similar
 - [ESPHome](https://esphome.io) version **2022.1** or later
 
 If you use ESPHome **2021.12** version or earlyer you need to make [following changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component.
-In order to apply this PR you can use following ESPHome configuration:
+In order to apply this PR you can use following ESPHome configuration (requires **ESPHome 2021.11** or later):
 ```yaml
 external_components:
   - source: github://myhomeiot/esphome-components
@@ -131,5 +131,5 @@ template:
         icon: mdi:bluetooth
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
         attributes:
-          devices: "{{ states.sensor | selectattr('entity_id', 'search', '^sensor.ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
 ```
