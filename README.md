@@ -131,5 +131,7 @@ template:
         icon: mdi:bluetooth
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
         attributes:
-          devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          # devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          # Important note: In Passive BLE Monitor version 7.8.2 and later 'attributes.mac address' was changed to 'attributes.mac_address', please update your config
+          devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac_address', 'defined') | map(attribute='attributes.mac_address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
 ```
