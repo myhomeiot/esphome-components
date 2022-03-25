@@ -16,6 +16,8 @@ class BLEGateway : public Component, public esp32_ble_tracker::ESPBTDeviceListen
 
   static std::string scan_result_to_hci_packet_hex(const esp_ble_gap_cb_param_t::ble_scan_result_evt_param &scan_result);
   void dump_config() override;
+  void disable_discovery();
+  bool is_discovery_enabled() const;
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
   void add_device(uint64_t device);
   void set_devices(std::string devices);

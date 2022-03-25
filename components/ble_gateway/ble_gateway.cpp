@@ -57,8 +57,14 @@ void BLEGateway::dump_config() {
     ESP_LOGCONFIG(TAG, "  MAC address: %s", address_uint64_to_string(device).c_str());
 }
 
+bool BLEGateway::is_discovery_enabled() const {
+  return this->discovery_enabled_;
+}
+
+void BLEGateway::disable_discovery() { this->discovery_enabled_ = false; }
+
 bool BLEGateway::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  if (std::find(this->devices_.begin(), this->devices_.end(), device.address_uint64()) != this->devices_.end()) {
+  if ((this->is_discovery_enabled()) || (std::find(this->devices_.begin(), this->devices_.end(), device.address_uint64()) != this->devices_.end())) {
     auto packet = scan_result_to_hci_packet_hex(device.get_scan_result());
     ESP_LOGD(TAG, "[%s] Packet %s", address_uint64_to_string(device.address_uint64()).c_str(), packet.c_str());
     this->callback_.call(device, packet);

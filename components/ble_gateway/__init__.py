@@ -3,6 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import esp32_ble_tracker
 from esphome import automation
 from esphome.const import (
+    CONF_DISCOVERY,
     CONF_ID,
     CONF_MAC_ADDRESS,
     CONF_TRIGGER_ID,
@@ -35,6 +36,7 @@ CONFIG_SCHEMA = cv.Schema(
             ),
             cv.Length(min=1),
         ),
+        cv.Optional(CONF_DISCOVERY, default=False): cv.boolean,
         cv.Required(CONF_ON_BLE_ADVERTISE): automation.validate_automation(
             {
                 cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(BLEGatewayBLEAdvertiseTrigger),
@@ -49,8 +51,12 @@ async def to_code(config):
     await cg.register_component(var, config)
     await esp32_ble_tracker.register_ble_device(var, config)
 
-    if config.get(CONF_DEVICES):
-      cg.add(var.set_devices("".join(f"{str(conf[CONF_MAC_ADDRESS]).replace(':', '')}" for conf in config[CONF_DEVICES])))
+    discovery = config[CONF_DISCOVERY]
+    if not discovery:
+        cg.add(var.disable_discovery())
+    else:
+        if config.get(CONF_DEVICES):
+          cg.add(var.set_devices("".join(f"{str(conf[CONF_MAC_ADDRESS]).replace(':', '')}" for conf in config[CONF_DEVICES])))
 
     for conf in config.get(CONF_ON_BLE_ADVERTISE):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
