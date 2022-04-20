@@ -61,6 +61,7 @@ class MyHomeIOT_BLEHost : public Component, public esp32_ble_tracker::ESPBTClien
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
   void gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
                            esp_ble_gattc_cb_param_t *param) override;
+  virtual void gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t *param) {}
   void on_scan_end() override {}
 
  protected:
