@@ -4,6 +4,7 @@ from esphome.components import esp32_ble_tracker
 from esphome import automation
 from esphome.const import (
     CONF_ID,
+    CONF_DISCOVERY,
     CONF_MAC_ADDRESS,
     CONF_TRIGGER_ID,
     CONF_ON_BLE_ADVERTISE,
@@ -27,6 +28,7 @@ BLEGatewayBLEAdvertiseTrigger = ble_gateway_ns.class_(
 CONFIG_SCHEMA = cv.Schema(
     {
         cv.GenerateID(): cv.declare_id(BLEGateway),
+        cv.Optional(CONF_DISCOVERY, default=False): cv.boolean,
         cv.Optional(CONF_DEVICES): cv.All(
             cv.ensure_list(
                 {
@@ -49,6 +51,7 @@ async def to_code(config):
     await cg.register_component(var, config)
     await esp32_ble_tracker.register_ble_device(var, config)
 
+    cg.add(var.set_discovery(config[CONF_DISCOVERY]))
     if config.get(CONF_DEVICES):
       cg.add(var.set_devices("".join(f"{str(conf[CONF_MAC_ADDRESS]).replace(':', '')}" for conf in config[CONF_DEVICES])))
 

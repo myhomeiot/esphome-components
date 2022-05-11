@@ -52,13 +52,13 @@ std::string address_uint64_to_string(uint64_t address) {
 }
 
 void BLEGateway::dump_config() {
-  ESP_LOGCONFIG(TAG, "BLE Gateway (%d devices):", this->devices_.size());
+  ESP_LOGCONFIG(TAG, "BLE Gateway: Discovery %s, %d device(s) configured:", YESNO(this->discovery_), this->devices_.size());
   for (auto device : this->devices_)
     ESP_LOGCONFIG(TAG, "  MAC address: %s", address_uint64_to_string(device).c_str());
 }
 
 bool BLEGateway::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  if (std::find(this->devices_.begin(), this->devices_.end(), device.address_uint64()) != this->devices_.end()) {
+  if (this->discovery_ || std::find(this->devices_.begin(), this->devices_.end(), device.address_uint64()) != this->devices_.end()) {
     auto packet = scan_result_to_hci_packet_hex(device.get_scan_result());
     ESP_LOGD(TAG, "[%s] Packet %s", address_uint64_to_string(device.address_uint64()).c_str(), packet.c_str());
     this->callback_.call(device, packet);
