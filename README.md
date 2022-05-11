@@ -134,6 +134,7 @@ switch:
     turn_on_action: [lambda: id(blegateway).set_discovery(true);]
     turn_off_action: [lambda: id(blegateway).set_discovery(false);]
     disabled_by_default: true
+    entity_category: config
 
 # Home Assistant
 input_boolean:
