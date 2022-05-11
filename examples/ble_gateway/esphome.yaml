@@ -12,6 +12,16 @@ ble_gateway:
         event: esphome.on_ble_advertise
         data:
           packet: !lambda return packet;
+#          gateway_id: ${device_id}
+
+binary_sensor:
+  - platform: homeassistant
+    id: ble_gateway_discovery
+    entity_id: binary_sensor.ble_gateway
+    attribute: discovery
+    on_state:
+      then:
+        lambda: id(blegateway).set_discovery(x);
 
 text_sensor:
   - platform: homeassistant
@@ -21,3 +31,13 @@ text_sensor:
     on_value:
       then:
         lambda: id(blegateway).set_devices(x);
+
+switch:
+  - platform: template
+    id: switch_ble_gateway_discovery
+    name: BLE Gateway Discovery
+    icon: mdi:bluetooth-connect
+    lambda: return id(blegateway).get_discovery();
+    turn_on_action: [lambda: id(blegateway).set_discovery(true);]
+    turn_off_action: [lambda: id(blegateway).set_discovery(false);]
+    disabled_by_default: true

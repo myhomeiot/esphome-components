@@ -15,6 +15,9 @@ input_boolean:
   settings_ble_gateway:
     name: BLE Gateway
     icon: mdi:bluetooth
+  settings_ble_gateway_discovery:
+    name: BLE Gateway Discovery
+    icon: mdi:bluetooth-connect
 
 input_text:
   settings_ble_gateway_add_device:
@@ -32,6 +35,7 @@ automation:
       - service: ble_monitor.parse_data
         data:
           packet: "{{ trigger.event.data.packet }}"
+          gateway_id: "{{ trigger.event.data.gateway_id if trigger.event.data.gateway_id is defined else 'unknown' }}"
 
 template:
   - binary_sensor:
@@ -40,4 +44,14 @@ template:
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
         availability: "{{ is_state('binary_sensor.ha_started', 'on') }}"
         attributes:
-          devices: "{{ states.sensor | selectattr('entity_id', 'search', '^sensor.ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          discovery: "{{ is_state('input_boolean.settings_ble_gateway_discovery', 'on') }}"
+          devices: >-
+            {% set devices = namespace(items = []) %}
+            {% for s in states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | map(attribute='entity_id') %}
+              {% set devices.items = devices.items + [device_id(s)] %}
+            {% endfor %}
+            {% set ns = namespace(items = []) %}
+            {% for s in devices.items | unique %}
+              {% set ns.items = ns.items + [(device_attr(s, 'identifiers') | first)[1]] %}
+            {% endfor %}
+            {{ ns.items | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}

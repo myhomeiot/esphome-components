@@ -92,7 +92,10 @@ automation:
 #### Advanced configuration where ESPHome devices gets MAC addresses from Passive BLE Monitor configuration
 Note: Be sure that you turn **on** the `input_boolean.settings_ble_gateway` if you want to receive BLE packets from BLE Gateway's.
 
-**Important note:** New device address will be populated to ESPHome devices only after Passive BLE Monitor receives first BLE packet and creates entities for it. If in your configuration you don't have BLE stick and you have only ESPHome devices, you will need to add this device MAC address manually into the `input_text.settings_ble_gateway_add_device`. After Passive BLE Monitor creates entities for new device, you can remove address.
+**Important note:** New device address will be populated to ESPHome devices only after Passive BLE Monitor receives first BLE packet and creates entities for it. If in your configuration you don't have BLE stick and you have only ESPHome devices you can use one of the following methods:
+1. Add this device MAC address manually into the `input_text.settings_ble_gateway_add_device`. After Passive BLE Monitor creates entities for new device, you can remove address.
+2. Enable [discovery](https://custom-components.github.io/ble_monitor/configuration_params#discovery) for Passive BLE Monitor and ESPHome BLE Gateway `input_boolean.settings_ble_gateway_discovery`. After required devices will be discovered turn off discovery options (for Passive BLE Monitor and ESPHome BLE Gateway) and clean up unneeded devices that got detected if any.
+
 ```yaml
 # ESPHome
 ble_gateway:
@@ -104,6 +107,15 @@ ble_gateway:
         data:
           packet: !lambda return packet;
 
+binary_sensor:
+  - platform: homeassistant
+    id: ble_gateway_discovery
+    entity_id: binary_sensor.ble_gateway
+    attribute: discovery
+    on_state:
+      then:
+        lambda: id(blegateway).set_discovery(x);
+
 text_sensor:
   - platform: homeassistant
     id: ble_gateway_devices
@@ -113,11 +125,24 @@ text_sensor:
       then:
         lambda: id(blegateway).set_devices(x);
 
+switch:
+  - platform: template
+    id: switch_ble_gateway_discovery
+    name: BLE Gateway Discovery
+    icon: mdi:bluetooth-connect
+    lambda: return id(blegateway).get_discovery();
+    turn_on_action: [lambda: id(blegateway).set_discovery(true);]
+    turn_off_action: [lambda: id(blegateway).set_discovery(false);]
+    disabled_by_default: true
+
 # Home Assistant
 input_boolean:
   settings_ble_gateway:
     name: BLE Gateway
     icon: mdi:bluetooth
+  settings_ble_gateway_discovery:
+    name: BLE Gateway Discovery
+    icon: mdi:bluetooth-connect
 
 input_text:
   settings_ble_gateway_add_device:
@@ -131,7 +156,21 @@ template:
         icon: mdi:bluetooth
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
         attributes:
+          discovery: "{{ is_state('input_boolean.settings_ble_gateway_discovery', 'on') }}"
           # devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
           # Important note: In Passive BLE Monitor version 7.8.2 and later 'attributes.mac address' was changed to 'attributes.mac_address', please update your config
-          devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac_address', 'defined') | map(attribute='attributes.mac_address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          # devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac_address', 'defined') | map(attribute='attributes.mac_address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
+          # Note: In Home Assistant 2022.x, Passive BLE Monitor version 8.x and later you can use device attribute identifiers
+          devices: >-
+            {% set devices = namespace(items = []) %}
+            {% for s in states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | map(attribute='entity_id') %}
+              {% set devices.items = devices.items + [device_id(s)] %}
+            {% endfor %}
+            {% set ns = namespace(items = []) %}
+            {% for s in devices.items | unique %}
+              {% set ns.items = ns.items + [(device_attr(s, 'identifiers') | first)[1]] %}
+            {% endfor %}
+            {{ ns.items | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}
 ```
+
+**More configuration examples you can find in [examples](examples) folder.**
