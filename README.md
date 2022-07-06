@@ -135,21 +135,24 @@ switch:
     turn_off_action: [lambda: id(blegateway).set_discovery(false);]
     disabled_by_default: true
     entity_category: config
-
+```
+```yaml
 # Home Assistant
 input_boolean:
   settings_ble_gateway:
     name: BLE Gateway
     icon: mdi:bluetooth
+    initial: on
   settings_ble_gateway_discovery:
     name: BLE Gateway Discovery
     icon: mdi:bluetooth-connect
-
+    initial: off
+    
 input_text:
   settings_ble_gateway_add_device:
     name: BLE Gateway Add Device
     icon: mdi:bluetooth-connect
-    initial: ''
+    pattern: (?:[0-9A-F]{2}[:]){5}(?:[0-9A-F]{2})
 
 template:
   - binary_sensor:
