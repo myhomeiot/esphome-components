@@ -136,6 +136,9 @@ switch:
     disabled_by_default: true
     entity_category: config
 ```
+
+Add the following to your custom configuration in Home Assistant ( or preferably add the following to Helpers )
+
 ```yaml
 # Home Assistant
 input_boolean:
@@ -152,7 +155,7 @@ input_text:
   settings_ble_gateway_add_device:
     name: BLE Gateway Add Device
     icon: mdi:bluetooth-connect
-    pattern: (?:[0-9A-F]{2}[:]){5}(?:[0-9A-F]{2})
+    pattern: (?:[0-9A-Fa-f]{2}[:]){5}(?:[0-9A-Fa-f]{2})
 
 template:
   - binary_sensor:
@@ -161,10 +164,6 @@ template:
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
         attributes:
           discovery: "{{ is_state('input_boolean.settings_ble_gateway_discovery', 'on') }}"
-          # devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac address', 'defined') | map(attribute='attributes.mac address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
-          # Important note: In Passive BLE Monitor version 7.8.2 and later 'attributes.mac address' was changed to 'attributes.mac_address', please update your config
-          # devices: "{{ states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | selectattr('attributes.mac_address', 'defined') | map(attribute='attributes.mac_address') | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}"
-          # Note: In Home Assistant 2022.x, Passive BLE Monitor version 8.x and later you can use device attribute identifiers
           devices: >-
             {% set devices = namespace(items = []) %}
             {% for s in states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | map(attribute='entity_id') %}
@@ -172,9 +171,16 @@ template:
             {% endfor %}
             {% set ns = namespace(items = []) %}
             {% for s in devices.items | unique %}
-              {% set ns.items = ns.items + [(device_attr(s, 'identifiers') | first)[1]] %}
+              {% set ids = device_attr(s, 'identifiers')  %}
+              {% if ids and ids | first and ids | first | last and ( ids | first | last | length == 17 ) and ( ids | first | last ) is match('(?:[0-9A-Fa-f]{2}[:]){5}(?:[0-9A-Fa-f]{2})', ignorecase=False) %}
+                {% set ns.items = ns.items + [ ids | first | last ] %}
+              {% endif %}
             {% endfor %}
-            {{ ns.items | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}
+            {% if is_state('binary_sensor.ble_gateway', 'on') %}
+              {% set discovery_device = states('input_text.settings_ble_gateway_add_device') %}
+              {% set ns.items = ns.items + [ discovery_device | replace(':', '') | trim ] if discovery_device | length == 17 and discovery_device is match('(?:[0-9A-Fa-f]{2}[:]){5}(?:[0-9A-Fa-f]{2})', ignorecase=False)  %}
+            {% endif %}
+            {{ ns.items | unique | join('') | replace(':', '') }}
 ```
 
 **More configuration examples you can find in [examples](examples) folder.**
