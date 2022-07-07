@@ -182,7 +182,7 @@ template:
               {% set discovery_device = states('input_text.settings_ble_gateway_add_device') %}
               {% set ns.items = ns.items + [ discovery_device | replace(':', '') | trim ] if discovery_device | length == 17 and discovery_device is match('(?:[0-9A-Fa-f]{2}[:]){5}(?:[0-9A-Fa-f]{2})', ignorecase=False)  %}
             {% endif %}
-            {{ ns.items | unique | join('') | replace(':', '') }}
+            {{ ns.items | sort | unique | join('') | replace(':', '') }}
 ```
 
 **More configuration examples you can find in [examples](examples) folder.**
