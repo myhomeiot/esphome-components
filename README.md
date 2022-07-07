@@ -156,7 +156,7 @@ input_text:
     name: BLE Gateway Add Device
     icon: mdi:bluetooth-connect
     pattern: (?:[0-9A-Fa-f]{2}[:]){5}(?:[0-9A-Fa-f]{2})
-    min: 17
+    min: 0
     max: 17
 
 template:
