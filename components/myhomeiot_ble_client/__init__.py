@@ -54,7 +54,7 @@ def versiontuple(v):
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
 
-    reversed = versiontuple(const.__version__) >= versiontuple("2021.9.0")
+    reversed = versiontuple(const.__version__.split("-")[0]) >= versiontuple("2021.9.0")
     if len(config[CONF_SERVICE_UUID]) == len(esp32_ble_tracker.bt_uuid16_format):
         cg.add(var.set_service_uuid16(esp32_ble_tracker.as_hex(config[CONF_SERVICE_UUID])))
     elif len(config[CONF_SERVICE_UUID]) == len(esp32_ble_tracker.bt_uuid32_format):

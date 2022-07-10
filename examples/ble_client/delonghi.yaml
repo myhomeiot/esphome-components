@@ -1,0 +1,186 @@
+# BLE Client Delonghi PrimaDonna example
+# Tested with Delonghi PrimaDonna Elite Experience ECAM 650.85.MS
+#
+# Useful links:
+#   https://github.com/Arbuzov/home_assistant_delonghi_primadonna
+#   https://github.com/manekinekko/cafy
+#   https://community.smartthings.com/t/controlling-delonghi-primadonna-elite-through-st/138402/41
+#   https://github.com/jatty/coffee-link/blob/main/start-delonghi
+
+substitutions:
+  delonghi_mac: !secret delonghi_mac
+  delonghi_name_prefix: Coffee Machine
+  delonghi_id_prefix: coffee_machine
+  delonghi_service_uuid: 00035B03-58E6-07DD-021A-08123A000300
+  delonghi_characteristic_uuid: 00035B03-58E6-07DD-021A-08123A000301
+  delonghi_update_interval: '5000'
+
+globals:
+  - id: delonghi_millis
+    type: uint32_t
+    restore_value: false
+    initial_value: '0'
+
+esphome:
+  on_loop:
+    then:
+      - lambda: |-
+          if (!id(delonghi_millis)) {
+            id(binary_sensor_${delonghi_id_prefix}_connected).publish_initial_state(false);
+            id(binary_sensor_${delonghi_id_prefix}).publish_initial_state(false);
+            id(delonghi_millis) = millis();
+          }
+
+          static unsigned char CMD_HEALTH_CHECK[] = {0x0D, 0x05, 0x75, 0x0F, 0xDA, 0x25};
+          if (id(binary_sensor_${delonghi_id_prefix}_connected).state && (millis() - id(delonghi_millis) > ${delonghi_update_interval})) {
+            auto chr = id(ble_client_${delonghi_id_prefix}).get_characteristic(
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_service_uuid}"),
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_characteristic_uuid}"));
+            if (chr) {
+              ESP_LOGD("${delonghi_id_prefix}", ">>> %s", format_hex_pretty(CMD_HEALTH_CHECK, sizeof(CMD_HEALTH_CHECK)).c_str());
+              chr->write_value(CMD_HEALTH_CHECK, sizeof(CMD_HEALTH_CHECK));
+            }
+            id(delonghi_millis) = millis();
+          }
+
+esp32_ble_tracker:
+
+ble_client:
+  - mac_address: ${delonghi_mac}
+    id: ble_client_${delonghi_id_prefix}
+    on_connect: [lambda: "id(binary_sensor_${delonghi_id_prefix}_connected).publish_state(true);"]
+    on_disconnect: [lambda: "id(binary_sensor_${delonghi_id_prefix}_connected).publish_state(false);"]
+
+binary_sensor:
+  - platform: template
+    id: binary_sensor_${delonghi_id_prefix}_connected
+    name: ${delonghi_name_prefix}
+    device_class: connectivity
+    entity_category: diagnostic
+
+  - platform: template
+    id: binary_sensor_${delonghi_id_prefix}
+    internal: true
+
+sensor:
+  - platform: template
+    id: sensor_${delonghi_id_prefix}_alarm
+    name: ${delonghi_name_prefix} Alarm
+    icon: mdi:alert
+    state_class: measurement
+    accuracy_decimals: 0
+
+switch:
+  - platform: ble_client
+    id: switch_${delonghi_id_prefix}_enable
+    name: ${delonghi_name_prefix} Enable
+    ble_client_id: ble_client_${delonghi_id_prefix}
+    disabled_by_default: true
+    entity_category: config
+
+  - platform: template
+    id: switch_${delonghi_id_prefix}
+    name: ${delonghi_name_prefix}
+    icon: mdi:coffee
+    lambda: return id(binary_sensor_${delonghi_id_prefix}).state;
+    turn_on_action:
+      - lambda: |-
+          if (!id(binary_sensor_${delonghi_id_prefix}_connected).state)
+            return;
+
+          static unsigned char CMD_POWER_ON[] = {0x0D, 0x07, 0x84, 0x0F, 0x02, 0x01, 0x55, 0x12};
+          auto chr = id(ble_client_${delonghi_id_prefix}).get_characteristic(
+            esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_service_uuid}"),
+            esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_characteristic_uuid}"));
+          if (chr)
+            chr->write_value(CMD_POWER_ON, sizeof(CMD_POWER_ON));
+
+button:
+  - platform: template
+    id: button_${delonghi_id_prefix}_americano
+    name: ${delonghi_name_prefix} Americano
+    icon: mdi:coffee-to-go-outline
+    on_press:
+      then:
+        - lambda: |-
+            if (!id(binary_sensor_${delonghi_id_prefix}_connected).state)
+              return;
+
+            static unsigned char CMD_AMERICANO_ON[] = {0x0D, 0x12, 0x83, 0xF0, 0x06, 0x01, 0x01, 0x00, 0x28, 0x02, 0x03, 0x0F, 0x00, 0x6E, 0x00, 0x00, 0x06, 0x47, 0x8B};
+            static unsigned char CMD_AMERICANO_OFF[] = {0x0D, 0x08, 0x83, 0xF0, 0x06, 0x02, 0x06, 0x18, 0x71};
+            auto chr = id(ble_client_${delonghi_id_prefix}).get_characteristic(
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_service_uuid}"),
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_characteristic_uuid}"));
+            if (chr)
+              chr->write_value(CMD_AMERICANO_ON, sizeof(CMD_AMERICANO_ON));
+
+  - platform: template
+    id: button_${delonghi_id_prefix}_coffe
+    name: ${delonghi_name_prefix} Coffe
+    icon: mdi:coffee-to-go-outline
+    on_press:
+      then:
+        - lambda: |-
+            if (!id(binary_sensor_${delonghi_id_prefix}_connected).state)
+              return;
+
+            static unsigned char COFFE_ON[] = {0x0D, 0x0F, 0x83, 0xF0, 0x02, 0x01, 0x01, 0x00, 0x67, 0x02, 0x02, 0x00, 0x00, 0x06, 0x77, 0xFF};
+            static unsigned char COFFE_OFF[] = {0x0D, 0x08, 0x83, 0xF0, 0x02, 0x02, 0x06, 0xC4, 0xB1};
+            auto chr = id(ble_client_${delonghi_id_prefix}).get_characteristic(
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_service_uuid}"),
+              esp32_ble_tracker::ESPBTUUID::from_raw("${delonghi_characteristic_uuid}"));
+            if (chr)
+              chr->write_value(COFFE_ON, sizeof(COFFE_ON));
+
+text_sensor:
+  - platform: ble_client
+    id: text_sensor_${delonghi_id_prefix}
+    internal: true
+    ble_client_id: ble_client_${delonghi_id_prefix}
+    service_uuid: ${delonghi_service_uuid}
+    characteristic_uuid: ${delonghi_characteristic_uuid}
+    notify: true
+    update_interval: never
+    on_notify:
+      then:
+        lambda: |-
+          static unsigned char packet[19];
+          static uint8_t index = 0;
+
+          id(delonghi_millis) = millis();
+          ESP_LOGD("${delonghi_id_prefix}", "%s", format_hex_pretty((uint8_t *) x.c_str(), x.size()).c_str());
+          if (index + x.size() > sizeof(packet))
+            ESP_LOGE("${delonghi_id_prefix}", "Packet longer than (%d) bytes", sizeof(packet));
+          else {
+            memcpy(&packet[index], x.c_str(), x.size());
+            index += x.size();
+            if (index > 0 && packet[0] != 0xD0)
+              ESP_LOGE("${delonghi_id_prefix}", "Packet has wrong signature (0x%02X)", packet[0]);
+            else if (index >= 2 && index >= packet[1] + 1) {
+              ESP_LOGD("${delonghi_id_prefix}", "<<< %s", format_hex_pretty(packet, index).c_str());
+
+              uint16_t deviser = 0x1D0F, i3, i4, i5, crc = packet[index - 2] << 8 | packet[index - 1];
+              for (int i = 0; i < index - 2; i++) {
+                i3 = (((deviser << 8) | (deviser >> 8)) & 0x0000FFFF) ^ packet[i];
+                i4 = i3 ^ ((i3 & 0xFF) >> 4);
+                i5 = i4 ^ ((i4 << 12) & 0x0000FFFF);
+                deviser = i5 ^ (((i5 & 0xFF) << 5) & 0x0000FFFF);
+              }
+              if (deviser != crc)
+                ESP_LOGE("${delonghi_id_prefix}", "CRC error, expected (0x%04X) received (0x%04X)", deviser, crc);
+              else {
+                switch (packet[2]) {
+                case 0x75:
+                  id(binary_sensor_${delonghi_id_prefix}).publish_state(packet[9] != 0);
+                  id(sensor_${delonghi_id_prefix}_alarm).publish_state((int32_t) packet[7] + 
+                    (int32_t)(packet[8] << 8) + (int32_t)(packet[12] << 16) + (int32_t)(packet[13] << 24));
+                  break;
+                default:
+                  ESP_LOGW("${delonghi_id_prefix}", "Unknown packet type (0x%02X)", packet[2]);
+                }
+              }
+            }
+            else
+              return;
+          }
+          index = 0;
