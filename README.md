@@ -137,7 +137,7 @@ switch:
     entity_category: config
 ```
 
-Add the following to your custom configuration in Home Assistant ( or preferably add the following to Helpers )
+Add the following to your custom configuration in Home Assistant.
 
 ```yaml
 # Home Assistant
