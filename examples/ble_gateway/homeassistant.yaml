@@ -42,7 +42,6 @@ template:
       - name: BLE Gateway
         icon: mdi:bluetooth
         state: "{{ is_state('input_boolean.settings_ble_gateway', 'on') }}"
-        availability: "{{ is_state('binary_sensor.ha_started', 'on') }}"
         attributes:
           discovery: "{{ is_state('input_boolean.settings_ble_gateway_discovery', 'on') }}"
           devices: >-
