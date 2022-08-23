@@ -41,7 +41,7 @@ void MyHomeIOT_BLEClient::connect() {
 void MyHomeIOT_BLEClient::disconnect() {
   ESP_LOGI(TAG, "[%s] Disconnecting", to_string(this->address_).c_str());
   this->state_ = MYHOMEIOT_IDLE;
-  if (auto status = esp_ble_gattc_close(ble_host_->gattc_if, this->conn_id_))
+  if (auto status = esp_ble_gap_disconnect(this->remote_bda_))
     ESP_LOGW(TAG, "[%s] close error, status (%d)", to_string(this->address_).c_str(), status);
 }
 
@@ -74,17 +74,32 @@ bool MyHomeIOT_BLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &dev
 
 void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if,
   esp_ble_gattc_cb_param_t *param) {
+    ESP_LOGD(TAG, "[%s] EVENT (%d)", to_string(this->address_).c_str(), event);
+
   switch (event) {
+    case ESP_GATTC_REG_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_REG_EVT, app_id (%d), if (%d)", to_string(this->address_).c_str(),
+		      ble_host_->app_id, esp_gattc_if);
+      break;
+    }
+    case ESP_GATTC_CONNECT_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_CONNECT_EVT, conn_id (%d), app_id (%d), if (%d)",
+		      to_string(this->address_).c_str(), param->connect.conn_id,
+		      ble_host_->app_id, esp_gattc_if);
+      break;
+    }
     case ESP_GATTC_OPEN_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_OPEN_EVT, conn_id (%d), app_id (%d), if (%d), status (%#x)",
+		      to_string(this->address_).c_str(), param->open.conn_id, ble_host_->app_id,
+		      esp_gattc_if, param->open.status);
       if (memcmp(param->open.remote_bda, this->remote_bda_, sizeof(this->remote_bda_)) != 0)
         break;
       if (param->open.status != ESP_GATT_OK) {
-        ESP_LOGW(TAG, "[%s] OPEN_EVT failed, status (%d), app_id (%d)", to_string(this->address_).c_str(),
+        ESP_LOGW(TAG, "[%s] OPEN_EVT failed, status (%#x), app_id (%d)", to_string(this->address_).c_str(),
           param->open.status, ble_host_->app_id);
         report_error(MYHOMEIOT_IDLE);
         break;
       }
-      ESP_LOGI(TAG, "[%s] Connected successfully, app_id (%d)", to_string(this->address_).c_str(), ble_host_->app_id);
       this->conn_id_ = param->open.conn_id;
       if (auto status = esp_ble_gattc_send_mtu_req(ble_host_->gattc_if, param->open.conn_id))
       {
@@ -97,9 +112,12 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       break;
     }
     case ESP_GATTC_CFG_MTU_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_CFG_MTU_EVT, app_id (%d), if (%d)", to_string(this->address_).c_str(),
+		      ble_host_->app_id, esp_gattc_if);
       if (param->cfg_mtu.conn_id != this->conn_id_)
         break;
-      if (param->cfg_mtu.status != ESP_GATT_OK) {
+      if (param->cfg_mtu.status != ESP_GATT_OK)
+      {
         ESP_LOGW(TAG, "[%s] CFG_MTU_EVT failed, status (%d)", to_string(this->address_).c_str(),
           param->cfg_mtu.status);
         report_error();
@@ -113,13 +131,17 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       break;
     }
     case ESP_GATTC_DISCONNECT_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_DISCONNECT_EVT, conn_id (%d), reason (%#x)",
+		      to_string(this->address_).c_str(), param->disconnect.conn_id,
+		      param->disconnect.reason);
       if (memcmp(param->disconnect.remote_bda, this->remote_bda_, sizeof(this->remote_bda_)) != 0)
         break;
-      ESP_LOGD(TAG, "[%s] DISCONNECT_EVT", to_string(this->address_).c_str());
       this->state_ = MYHOMEIOT_IDLE;
+      this->disconnect();
       break;
     }
     case ESP_GATTC_SEARCH_RES_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_SEARCH_RES_EVT", to_string(this->address_).c_str());
       if (param->search_res.conn_id != this->conn_id_)
         break;
       esp32_ble_tracker::ESPBTUUID uuid = param->search_res.srvc_id.uuid.len == ESP_UUID_LEN_16 ? esp32_ble_tracker::ESPBTUUID::from_uint16(param->search_res.srvc_id.uuid.uuid.uuid16)
@@ -134,6 +156,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_SEARCH_CMPL_EVT", to_string(this->address_).c_str());
       if (param->search_cmpl.conn_id != this->conn_id_)
         break;
       ESP_LOGV(TAG, "[%s] SEARCH_CMPL_EVT", to_string(this->address_).c_str());
@@ -150,7 +173,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       esp_gattc_char_elem_t result;
       while (true) {
         uint16_t count = 1;
-        auto status = esp_ble_gattc_get_all_char(ble_host_->gattc_if, this->conn_id_, 
+        auto status = esp_ble_gattc_get_all_char(ble_host_->gattc_if, this->conn_id_,
           this->start_handle_, this->end_handle_, &result, &count, offset);
         if (status != ESP_GATT_OK) {
           if (status == ESP_GATT_INVALID_OFFSET || status == ESP_GATT_NOT_FOUND)
@@ -167,7 +190,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
             this->char_uuid_.to_string().c_str());
           this->char_handle_ = result.char_handle;
 
-          if (auto status = esp_ble_gattc_read_char(ble_host_->gattc_if, this->conn_id_, 
+          if (auto status = esp_ble_gattc_read_char(ble_host_->gattc_if, this->conn_id_,
             this->char_handle_, ESP_GATT_AUTH_REQ_NONE) != ESP_GATT_OK) {
             ESP_LOGW(TAG, "[%s] read_char error sending read request, status (%d)",
               to_string(this->address_).c_str(), status);
@@ -186,18 +209,25 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
       break;
     }
     case ESP_GATTC_READ_CHAR_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_READ_CHAR_EVT", to_string(this->address_).c_str());
       if (param->read.conn_id != this->conn_id_ || param->read.handle != this->char_handle_)
         break;
       if (param->read.status != ESP_GATT_OK)
       {
-        ESP_LOGW(TAG, "[%s] READ_CHAR_EVT error reading char at handle (%d), status (%d)", to_string(this->address_).c_str(),
-          param->read.handle, param->read.status);
+        ESP_LOGW(TAG, "[%s] READ_CHAR_EVT error reading char at handle (%d), status (%d)",
+			    to_string(this->address_).c_str(),
+			    param->read.handle, param->read.status);
         report_error();
         break;
       }
 
       report_results(param->read.value, param->read.value_len);
       this->state_ = MYHOMEIOT_ESTABLISHED;
+      break;
+    }
+    case ESP_GATTC_CLOSE_EVT: {
+      ESP_LOGD(TAG, "[%s] ESP_GATTC_CLOSE_EVT, status (%d), reason (%d)", to_string(this->address_).c_str(),
+		      param->close.status, param->close.reason);
       break;
     }
     default:
