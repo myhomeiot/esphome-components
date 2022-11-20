@@ -1,4 +1,4 @@
-#ifdef ARDUINO_ARCH_ESP32
+#ifdef USE_ESP32
 
 #include <esp_gap_ble_api.h>
 #include "esphome/core/log.h"
@@ -46,13 +46,26 @@ bool MyHomeIOT_BLEHost::parse_device(const esp32_ble_tracker::ESPBTDevice &devic
   return false;
 }
 
-void MyHomeIOT_BLEHost::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if,
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2022, 11, 0)
+bool MyHomeIOT_BLEHost::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
+  esp_ble_gattc_cb_param_t *param) {
+  return gattc_event_handler_internal(event, gattc_if, param);
+}
+#else
+void MyHomeIOT_BLEHost::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if,
+  esp_ble_gattc_cb_param_t *param) {
+  gattc_event_handler_internal(event, gattc_if, param);
+}
+#endif
+
+bool MyHomeIOT_BLEHost::gattc_event_handler_internal(esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if,
   esp_ble_gattc_cb_param_t *param) {
   if (event == ESP_GATTC_REG_EVT && this->app_id != param->reg.app_id)
-    return;
-  if (event != ESP_GATTC_REG_EVT && esp_gattc_if != ESP_GATT_IF_NONE && gattc_if != this->gattc_if)
-    return;
+    return false;
+  if (event != ESP_GATTC_REG_EVT && esp_gattc_if != ESP_GATT_IF_NONE && esp_gattc_if != this->gattc_if)
+    return false;
 
+  bool result = true;
   switch (event) {
     case ESP_GATTC_REG_EVT: {
       if (param->reg.status == ESP_GATT_OK) {
@@ -66,11 +79,12 @@ void MyHomeIOT_BLEHost::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt
     default:
       if (current)
       {
-        current->gattc_event_handler(event, esp_gattc_if, param);
+        result = current->gattc_event_handler(event, esp_gattc_if, param);
         this->set_state(current->state());
       }
       break;
   }
+  return result;
 }
 
 }  // namespace myhomeiot_ble_host

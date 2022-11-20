@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef ARDUINO_ARCH_ESP32
+#ifdef USE_ESP32
 
 #include "esphome/core/component.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
@@ -18,7 +18,7 @@ class MyHomeIOT_BLEClient : public PollingComponent, public myhomeiot_ble_host::
 
   void add_on_state_callback(std::function<void(std::vector<uint8_t>, const MyHomeIOT_BLEClient &)> &&callback) { this->callback_.add(std::move(callback)); }
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device);
-  void gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
+  bool gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t *param);
 
   void set_address(uint64_t address) { this->address_ = address; }
 

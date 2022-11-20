@@ -1,4 +1,4 @@
-#ifdef ARDUINO_ARCH_ESP32
+#ifdef USE_ESP32
 
 #include <esp_gap_ble_api.h>
 #include "esphome/core/log.h"
@@ -72,7 +72,7 @@ bool MyHomeIOT_BLEClient::parse_device(const esp32_ble_tracker::ESPBTDevice &dev
   return true;
 }
 
-void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if,
+bool MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t esp_gattc_if,
   esp_ble_gattc_cb_param_t *param) {
   switch (event) {
     case ESP_GATTC_OPEN_EVT: {
@@ -114,7 +114,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
     }
     case ESP_GATTC_DISCONNECT_EVT: {
       if (memcmp(param->disconnect.remote_bda, this->remote_bda_, sizeof(this->remote_bda_)) != 0)
-        break;
+        return false;
       ESP_LOGD(TAG, "[%s] DISCONNECT_EVT", to_string(this->address_).c_str());
       this->state_ = MYHOMEIOT_IDLE;
       break;
@@ -203,6 +203,7 @@ void MyHomeIOT_BLEClient::gattc_event_handler(esp_gattc_cb_event_t event, esp_ga
     default:
       break;
   }
+  return true;
 }
 
 std::string MyHomeIOT_BLEClient::to_string(uint64_t address) const {
