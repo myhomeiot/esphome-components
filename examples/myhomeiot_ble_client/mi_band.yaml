@@ -100,14 +100,12 @@ sensor:
     id: ${mi_band_id_prefix}_last_charging_timestamp
     name: ${mi_band_name_prefix} Last Charging Timestamp
     device_class: timestamp
-    state_class: measurement
     accuracy_decimals: 0
 
   - platform: template
     id: ${mi_band_id_prefix}_full_charging_timestamp
     name: ${mi_band_name_prefix} Full Charging Timestamp
     device_class: timestamp
-    state_class: measurement
     accuracy_decimals: 0
 
   - platform: template
