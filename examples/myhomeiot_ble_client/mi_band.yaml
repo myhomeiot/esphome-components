@@ -10,11 +10,19 @@ esp32_ble_tracker:
       then:
         - lambda: |-
             if (x.size() != 4)
-            {
-              ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
-              return;
-            };
-            id(${mi_band_id_prefix}_steps).publish_state((uint32_t)(x[3] << 24) | (uint32_t)(x[2] << 16) | (uint32_t)(x[1] << 8) | (uint32_t)(x[0]));
+              ESP_LOGE("esp32_ble_tracker", "Payload has wrong size (%d)", x.size());
+            else
+              id(${mi_band_id_prefix}_steps).publish_state((uint32_t)(x[3] << 24) | (uint32_t)(x[2] << 16) | (uint32_t)(x[1] << 8) | (uint32_t)(x[0]));
+  on_ble_manufacturer_data_advertise:
+    - mac_address: ${mi_band_mac}
+      manufacturer_id: '0157'
+      then:
+        - lambda: |-
+            if (x.size() != 24)
+              ESP_LOGE("esp32_ble_tracker", "Payload has wrong size (%d)", x.size());
+            else
+              if (x[3] != 0xFF)
+                id(${mi_band_id_prefix}_heart_rate).publish_state(x[3]);
 
 myhomeiot_ble_host:
 
@@ -29,34 +37,41 @@ myhomeiot_ble_client:
         lambda: |-
           // https://github.com/Freeyourgadget/Gadgetbridge/blob/ef46035900f5fadb7403b2419c7b58e4ab94219e/app/src/main/java/nodomain/freeyourgadget/gadgetbridge/service/devices/huami/HuamiBatteryInfo.java#L26
           // Broken-down Time: https://www.gnu.org/software/libc/manual/html_node/Broken_002ddown-Time.html
+          const time_t J2000 = 946684800UL; // Jan 01 2000 12:00:00 UTC
           switch (x.size()) {
           case 10: { // Mi Band 1
             id(${mi_band_id_prefix}_battery_level).publish_state(x[0]);
             id(${mi_band_id_prefix}_battery_state).publish_state(x[9] == 2);
 
             struct tm c_tm = {x[6], x[5], x[4], x[3], x[2], (uint16_t) (2000 + x[1]) - 1900, 0, 0, -1};
-            id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(mktime(&c_tm));
+            time_t time = mktime(&c_tm);
+            if (time > J2000)
+              id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(time);
             break;
           }
           case 20: { // Mi Band 2/3/4/6
-            if (x[0] != 0x0F)
-            {
-              ESP_LOGE("myhomeiot_ble_client", "payload has wrong signature (0x%02X)", x[0]);
+            if (x[0] != 0x0F) {
+              ESP_LOGE("myhomeiot_ble_client", "Payload has wrong signature (0x%02X)", x[0]);
               return;
             };
             id(${mi_band_id_prefix}_battery_level).publish_state(x[1]);
-            id(${mi_band_id_prefix}_battery_level_last_charging).publish_state(x[19]);
             id(${mi_band_id_prefix}_battery_state).publish_state(x[2] == 1);
 
-            struct tm c_tm = {x[17], x[16], x[15], x[14], x[13] - 1, (uint16_t) (x[12] << 8 | x[11]) - 1900, 0, 0, -1};
-            id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(mktime(&c_tm));
+            struct tm c_tm = {x[9], x[8], x[7], x[6], x[5] - 1, (uint16_t) (x[4] << 8 | x[3]) - 1900, 0, 0, -1};
+            time_t time = mktime(&c_tm);
+            if (time > J2000)
+              id(${mi_band_id_prefix}_full_charging_timestamp).publish_state(time);
 
-            c_tm = {x[9], x[8], x[7], x[6], x[5] - 1, (uint16_t) (x[4] << 8 | x[3]) - 1900, 0, 0, -1};
-            id(${mi_band_id_prefix}_full_charging_timestamp).publish_state(mktime(&c_tm));
+            c_tm = {x[17], x[16], x[15], x[14], x[13] - 1, (uint16_t) (x[12] << 8 | x[11]) - 1900, 0, 0, -1};
+            time = mktime(&c_tm);
+            if (time > J2000) {
+              id(${mi_band_id_prefix}_last_charging_timestamp).publish_state(time);
+              id(${mi_band_id_prefix}_battery_level_last_charging).publish_state(x[19]);
+            }
             break;
           };
           default:
-            ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
+            ESP_LOGE("myhomeiot_ble_client", "Payload has wrong size (%d)", x.size());
           }
 
 binary_sensor:
@@ -89,29 +104,42 @@ sensor:
     accuracy_decimals: 0
 
   - platform: template
+    id: ${mi_band_id_prefix}_full_charging_timestamp
+    name: ${mi_band_name_prefix} Full Charging Timestamp
+    device_class: timestamp
+    icon: mdi:battery-clock
+    accuracy_decimals: 0
+    disabled_by_default: true
+
+  - platform: template
+    id: ${mi_band_id_prefix}_last_charging_timestamp
+    name: ${mi_band_name_prefix} Last Charging Timestamp
+    device_class: timestamp
+    icon: mdi:battery-clock-outline
+    accuracy_decimals: 0
+    disabled_by_default: true
+
+  - platform: template
     id: ${mi_band_id_prefix}_battery_level_last_charging
     name: ${mi_band_name_prefix} Battery Level Last Charging
     device_class: battery
     unit_of_measurement: '%'
     state_class: measurement
     accuracy_decimals: 0
-
-  - platform: template
-    id: ${mi_band_id_prefix}_last_charging_timestamp
-    name: ${mi_band_name_prefix} Last Charging Timestamp
-    device_class: timestamp
-    accuracy_decimals: 0
-
-  - platform: template
-    id: ${mi_band_id_prefix}_full_charging_timestamp
-    name: ${mi_band_name_prefix} Full Charging Timestamp
-    device_class: timestamp
-    accuracy_decimals: 0
+    disabled_by_default: true
 
   - platform: template
     id: ${mi_band_id_prefix}_steps
     name: ${mi_band_name_prefix} Steps
     icon: mdi:walk
     unit_of_measurement: steps
+    state_class: measurement
+    accuracy_decimals: 0
+
+  - platform: template
+    id: ${mi_band_id_prefix}_heart_rate
+    name: ${mi_band_name_prefix} Heart Rate
+    icon: mdi:heart-pulse
+    unit_of_measurement: bpm
     state_class: measurement
     accuracy_decimals: 0
