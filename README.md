@@ -165,7 +165,7 @@ template:
           devices: >-
             {% set devices = namespace(items = []) %}
             {% for s in states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | map(attribute='entity_id') %}
-              {% set devices.items = devices.items + [device_id(s)] %}
+              {% set devices.items = devices.items + ([device_id(s)] if device_id(s) else []) %}
             {% endfor %}
             {% set ns = namespace(items = []) %}
             {% for s in devices.items | unique %}
