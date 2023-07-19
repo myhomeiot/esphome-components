@@ -24,8 +24,8 @@ myhomeiot_ble_client:
                 return "";
               };
               ESP_LOGI("myhomeiot_ble_client", "Battery (%d%%), firmware (%s)", x[0], std::string(x.begin(), x.end()).substr(2).c_str());
-              char buffer[70 + 1];
+              static char buffer[70 + 1];
               const uint8_t *remote_bda = xthis.remote_bda();
               snprintf(buffer, sizeof(buffer), "043E2002010000%02X%02X%02X%02X%02X%02X14020106030295FE0C1695FE41209800000A1001%02X00",
                 remote_bda[5], remote_bda[4], remote_bda[3], remote_bda[2], remote_bda[1], remote_bda[0], x[0]);
-              return std::string(buffer).c_str();
+              return reinterpret_cast<const char *>(buffer);
