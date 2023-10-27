@@ -122,7 +122,7 @@ sensor:
   - platform: template
     id: ${mi_band_id_prefix}_battery_level_last_charging
     name: ${mi_band_name_prefix} Battery Level Last Charging
-    device_class: battery
+    icon: mdi:power-plug-battery-outline
     unit_of_measurement: '%'
     state_class: measurement
     accuracy_decimals: 0
