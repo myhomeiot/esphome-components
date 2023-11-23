@@ -74,6 +74,7 @@ class MyHomeIOT_BLEHost : public Component, public esp32_ble_tracker::ESPBTClien
  protected:
   MyHomeIOT_BLEClientNode *current{nullptr};
   std::vector<MyHomeIOT_BLEClientNode *> clients_;
+  void init();
 };
 
 }  // namespace myhomeiot_ble_host

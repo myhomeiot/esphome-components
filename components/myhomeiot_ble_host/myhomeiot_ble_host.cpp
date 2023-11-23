@@ -9,7 +9,7 @@ namespace myhomeiot_ble_host {
 
 static const char *const TAG = "myhomeiot_ble_host";
 
-void MyHomeIOT_BLEHost::setup() {
+void MyHomeIOT_BLEHost::init() {
   auto status = esp_ble_gattc_app_register(this->app_id);
   if (status) {
     ESP_LOGE(TAG, "app_register failed, app_id (%d) status (%d)", this->app_id, status);
@@ -18,11 +18,26 @@ void MyHomeIOT_BLEHost::setup() {
   this->set_state(MYHOMEIOT_IDLE);
 }
 
+void MyHomeIOT_BLEHost::setup() {
+#if ESPHOME_VERSION_CODE < VERSION_CODE(2023, 11, 0)
+  init();
+#endif
+}
+
 void MyHomeIOT_BLEHost::dump_config() {
   ESP_LOGCONFIG(TAG, "MyHomeIOT BLE Host");
 }
 
 void MyHomeIOT_BLEHost::loop() {
+#if ESPHOME_VERSION_CODE >= VERSION_CODE(2023, 11, 0)
+  if (!esp32_ble::global_ble->is_active()) {
+    this->set_state(esp32_ble_tracker::ClientState::INIT);
+    return;
+  }
+  if (this->state_ == esp32_ble_tracker::ClientState::INIT)
+    init();
+#endif
+
   if (current)
   {
     current->loop();
