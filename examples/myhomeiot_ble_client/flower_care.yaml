@@ -20,7 +20,7 @@ myhomeiot_ble_client:
             ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
             return;
           };
-          id(${living_room_flower_care_id_prefix}_battery_level).publish_state(x[0]);
+          id(${living_room_flower_care_id_prefix}_battery).publish_state(x[0]);
 
           std::string firmware(x.begin(), x.end());
           id(${living_room_flower_care_id_prefix}_firmware).publish_state(firmware.substr(2));
@@ -38,8 +38,8 @@ sensor:
       name: ${living_room_flower_care_name_prefix} Conductivity
 
   - platform: template
-    id: ${living_room_flower_care_id_prefix}_battery_level
-    name: ${living_room_flower_care_name_prefix} Battery Level
+    id: ${living_room_flower_care_id_prefix}_battery
+    name: ${living_room_flower_care_name_prefix} Battery
     device_class: battery
     unit_of_measurement: '%'
     state_class: measurement

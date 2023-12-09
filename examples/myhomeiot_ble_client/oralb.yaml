@@ -20,13 +20,13 @@ myhomeiot_ble_client:
             ESP_LOGE("myhomeiot_ble_client", "payload has wrong size (%d)", x.size());
             return;
           };
-          id(${oralb_toothbrush_id_prefix}_battery_level).publish_state(x[0]);
+          id(${oralb_toothbrush_id_prefix}_battery).publish_state(x[0]);
           id(${oralb_toothbrush_id_prefix}_battery_voltage).publish_state((x[2] << 8 | x[1]) / 1000.0f);
 
 sensor:
   - platform: template
-    id: ${oralb_toothbrush_id_prefix}_battery_level
-    name: ${oralb_toothbrush_name_prefix} Battery Level
+    id: ${oralb_toothbrush_id_prefix}_battery
+    name: ${oralb_toothbrush_name_prefix} Battery
     device_class: battery
     unit_of_measurement: '%'
     state_class: measurement

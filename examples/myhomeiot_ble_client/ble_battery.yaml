@@ -15,12 +15,12 @@ myhomeiot_ble_client:
     on_value:
       then:
         lambda: |-
-          id(${device_id_prefix}_battery_level).publish_state(x[0]);
+          id(${device_id_prefix}_battery).publish_state(x[0]);
 
 sensor:
   - platform: template
-    id: ${device_id_prefix}_battery_level
-    name: ${device_name_prefix} Battery Level
+    id: ${device_id_prefix}_battery
+    name: ${device_name_prefix} Battery
     device_class: battery
     unit_of_measurement: '%'
     state_class: measurement
