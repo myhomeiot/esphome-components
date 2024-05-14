@@ -1,0 +1,46 @@
+esp32_ble_tracker:
+  on_ble_advertise:
+    then:
+      - if:
+          condition:
+            lambda: |-
+              #if ESPHOME_VERSION_CODE < VERSION_CODE(2024, 5, 0)
+              #error "Requires ESPHome 2024.5.0 or higher"
+              #endif
+              #define IRK(s) \
+                ({ \
+                  std::vector<uint8_t> irk(16); \
+                  if (sscanf((s), \
+                    "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx", \
+                    &irk[0], &irk[1], &irk[2], &irk[3], &irk[4], &irk[5], &irk[6], &irk[7], \
+                    &irk[8], &irk[9], &irk[10], &irk[11], &irk[12], &irk[13], &irk[14], &irk[15]) != 16) \
+                    ESP_LOGE("on_ble_advertise", "IRK format error: (%s)", (s)); \
+                  irk; \
+                })
+
+              static const esp32_ble_tracker::ESPBTUUID apple_manufacturer_id = esp32_ble_tracker::ESPBTUUID::from_uint16(0x004C);
+              static const std::vector<std::vector<uint8_t>> irks = {
+                IRK("00112233445566778899aabbccddeeff"),
+                IRK("112233445566778899aabbccddeeff00")
+              };
+
+              for (auto data : x.get_manufacturer_datas())
+                if (data.uuid == apple_manufacturer_id) {
+                  for (auto irk : irks)
+                    if (x.resolve_irk(irk.data())) {
+                      // ESP_LOGI("on_ble_advertise", "[%s] IRK match: %s", x.address_str().c_str(), format_hex(irk).c_str());
+                      return true;
+                    }
+                  // ESP_LOGD("on_ble_advertise", "[%s] IRK not match", x.address_str().c_str());
+                }
+              return false;
+          then:
+            - homeassistant.event:
+                event: esphome.on_ble_advertise
+                data:
+                  packet: !lambda return ble_gateway::BLEGateway::scan_result_to_hci_packet_hex(x.get_scan_result());
+#                  gateway_id: ${device_id}
+                  proxy: !lambda return true;
+#            - lambda: |-
+#                ESP_LOGI("on_ble_advertise", "[%s] Packet %s", x.address_str().c_str(),
+#                  ble_gateway::BLEGateway::scan_result_to_hci_packet_hex(x.get_scan_result()).c_str());

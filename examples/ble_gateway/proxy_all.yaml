@@ -1,0 +1,12 @@
+esp32_ble_tracker:
+  on_ble_advertise:
+    then:
+      - homeassistant.event:
+          event: esphome.on_ble_advertise
+          data:
+            packet: !lambda return ble_gateway::BLEGateway::scan_result_to_hci_packet_hex(x.get_scan_result());
+#            gateway_id: ${device_id}
+            proxy: !lambda return true;
+#      - lambda: |-
+#          ESP_LOGI("on_ble_advertise", "[%s] Packet %s", x.address_str().c_str(),
+#            ble_gateway::BLEGateway::scan_result_to_hci_packet_hex(x.get_scan_result()).c_str());
