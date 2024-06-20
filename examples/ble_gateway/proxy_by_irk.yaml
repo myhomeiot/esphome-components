@@ -4,8 +4,8 @@ esp32_ble_tracker:
       - if:
           condition:
             lambda: |-
-              #if ESPHOME_VERSION_CODE < VERSION_CODE(2024, 5, 0)
-              #error "Requires ESPHome 2024.5.0 or higher"
+              #if ESPHOME_VERSION_CODE < VERSION_CODE(2024, 6, 0)
+              #error "Requires ESPHome 2024.6.0 or higher"
               #endif
               #define IRK(s) \
                 ({ \
