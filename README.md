@@ -39,15 +39,6 @@ If the heart of your Home Automation system is Home Assistant or another similar
 - [Passive BLE Monitor](https://github.com/custom-components/ble_monitor) integration version **6.2** or later. Thanks [@Ernst79](https://github.com/Ernst79)
 - [ESPHome](https://esphome.io) version **2022.1** or later
 
-If you use ESPHome **2021.12** version or earlyer you need to make [following changes](https://github.com/esphome/esphome/pull/2854) in ESPHome `esp32_ble_tracker` component.
-In order to apply this PR you can use following ESPHome configuration (requires **ESPHome 2021.11** or later):
-```yaml
-external_components:
-  - source: github://myhomeiot/esphome-components
-  - source: github://pr#2854
-    components: [esp32_ble_tracker]
-```
-
 #### ESPHome configuration example
 Note: This example use [event](https://esphome.io/components/api.html#homeassistant-event-action), you can use direct `ble_monitor.parse_data` [service call](https://esphome.io/components/api.html#homeassistant-service-action)
 ```yaml
