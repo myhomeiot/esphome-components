@@ -15,6 +15,7 @@ class MyHomeIOT_BLEClient : public PollingComponent, public myhomeiot_ble_host::
   void setup() override;
   void dump_config() override;
   void loop() override;
+  void update() override;
 
   void add_on_state_callback(std::function<void(std::vector<uint8_t>, const MyHomeIOT_BLEClient &)> &&callback) { this->callback_.add(std::move(callback)); }
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device);
@@ -47,7 +48,6 @@ class MyHomeIOT_BLEClient : public PollingComponent, public myhomeiot_ble_host::
 
   void connect();
   void disconnect();
-  void update() override;
   void report_results(uint8_t *data, uint16_t len);
   void report_error(esp32_ble_tracker::ClientState state = MYHOMEIOT_ESTABLISHED);
 };

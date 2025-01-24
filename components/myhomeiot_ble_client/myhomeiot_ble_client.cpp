@@ -28,6 +28,10 @@ void MyHomeIOT_BLEClient::loop() {
     this->disconnect();
 }
 
+void MyHomeIOT_BLEClient::update() {
+  this->is_update_requested_ = true;
+}
+
 void MyHomeIOT_BLEClient::connect() {
   ESP_LOGI(TAG, "[%s] Connecting", to_string(this->address_).c_str());
   this->state_ = MYHOMEIOT_CONNECTING;
@@ -43,10 +47,6 @@ void MyHomeIOT_BLEClient::disconnect() {
   this->state_ = MYHOMEIOT_IDLE;
   if (auto status = esp_ble_gattc_close(ble_host_->gattc_if, this->conn_id_))
     ESP_LOGW(TAG, "[%s] close error, status (%d)", to_string(this->address_).c_str(), status);
-}
-
-void MyHomeIOT_BLEClient::update() {
-  this->is_update_requested_ = true;
 }
 
 void MyHomeIOT_BLEClient::report_results(uint8_t *data, uint16_t len) {
