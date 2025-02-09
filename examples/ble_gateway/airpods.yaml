@@ -1,0 +1,243 @@
+# Usage example:
+#   <<: !include {file: airpods.yaml, vars: {airpods_irk: !secret irk_airpods, airpods_name_prefix: My AirPods, airpods_id_prefix: my_airpods}}
+# or
+#   <<: !include {file: airpods.yaml, vars: {airpods_irk: 00112233445566778899aabbccddeeff, airpods_name_prefix: My AirPods, airpods_id_prefix: my_airpods}}
+#
+# AirPods IRK (MagicAccIRK) in Apple Keychain stored in reverse order
+# Getting Identity Resolving Key (IRK) for Apple Watch, iPhone, iPad and AirPods: https://github.com/theengs/gateway/blob/development/docs/use/use.md#getting-identity-resolving-key-irk-for-apple-watch-iphone-ipad-and-airpods
+#
+# An Apple Continuity Protocol Reverse Engineering Project: https://github.com/furiousMAC/continuity
+# Proximity Pairing Message: https://github.com/furiousMAC/continuity/blob/master/messages/proximity_pairing.md
+# Theengs Decoder: https://github.com/theengs/decoder/blob/development/docs/devices/AppleAirPods.md
+# https://github.com/theengs/decoder/blob/development/src/devices/APPLEAIRPODS_json.h
+
+esp32_ble_tracker:
+  on_ble_advertise:
+    then:
+      - if:
+          condition:
+            - lambda: |-
+                #if ESPHOME_VERSION_CODE < VERSION_CODE(2024, 6, 0)
+                #error "Requires ESPHome 2024.6.0 or higher"
+                #endif
+                #define IRK(s) \
+                  ({ \
+                    std::vector<uint8_t> irk(16); \
+                    if (sscanf((s), \
+                      "%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx%02hhx", \
+                      &irk[0], &irk[1], &irk[2], &irk[3], &irk[4], &irk[5], &irk[6], &irk[7], \
+                      &irk[8], &irk[9], &irk[10], &irk[11], &irk[12], &irk[13], &irk[14], &irk[15]) != 16) \
+                      ESP_LOGE("airpods", "IRK format error: (%s)", (s)); \
+                    irk; \
+                  })
+
+                static const std::vector<uint8_t> irk = IRK("${airpods_irk}");
+                return x.resolve_irk(irk.data());
+          then:
+            - lambda: |-
+                const uint8_t UNKNOWN_BATTERY = 0x0F * 10;
+                const uint8_t LR = 0x00;
+                const uint8_t RL = 0x80;
+                const uint8_t L_CASE = 0x01;
+                const uint8_t L_AIR = 0x02;
+                const uint8_t L_EAR = 0x03;
+                const uint8_t L_MASK = L_CASE | L_AIR;
+                const uint8_t R_CASE = L_CASE << 2;
+                const uint8_t R_AIR = L_AIR << 2;
+                const uint8_t R_EAR = L_EAR << 2;
+                static const std::map<int, int> airpodsMap = {
+                    {0x05, LR | L_CASE | R_CASE},
+                    {0x14, LR | L_CASE | R_CASE},
+                    {0x15, LR | L_CASE | R_CASE},
+                    {0x25, RL | L_CASE | R_CASE},
+                    {0x34, RL | L_CASE | R_CASE},
+                    {0x35, RL | L_CASE | R_CASE},
+                    {0x55, LR | L_CASE | R_CASE},
+                    {0x75, RL | L_CASE | R_CASE},
+
+                    {0x00, LR | L_CASE | R_AIR},
+                    {0x11, LR | L_CASE | R_AIR},
+                    {0x71, RL | L_CASE | R_AIR},
+
+                    {0x02, LR | L_CASE | R_EAR},
+                    {0x13, LR | L_CASE | R_EAR},
+                    {0x24, RL | L_CASE | R_EAR},
+                    {0x73, RL | L_CASE | R_EAR},
+
+                    {0x20, RL | L_AIR  | R_CASE},
+                    {0x31, RL | L_AIR  | R_CASE},
+                    {0x51, LR | L_AIR  | R_CASE},
+
+                    {0x04, LR | L_EAR  | R_CASE},
+                    {0x22, RL | L_EAR  | R_CASE},
+                    {0x33, RL | L_EAR  | R_CASE},
+                    {0x53, LR | L_EAR  | R_CASE},
+
+                    {0x01, LR | L_AIR  | R_AIR},
+                    {0x21, RL | L_AIR  | R_AIR},
+
+                    {0x03, LR | L_AIR  | R_EAR},
+                    {0x29, RL | L_AIR  | R_EAR},
+
+                    {0x23, RL | L_EAR  | R_AIR},
+                    {0x09, LR | L_EAR  | R_AIR},
+
+                    {0x0B, LR | L_EAR  | R_EAR},
+                    {0x2B, RL | L_EAR  | R_EAR}
+                };
+                static const esp32_ble_tracker::ESPBTUUID apple_manufacturer_id = esp32_ble_tracker::ESPBTUUID::from_uint16(0x004C);
+                for (auto data : x.get_manufacturer_datas())
+                  if (data.uuid == apple_manufacturer_id && data.data.size() == 27 && data.data[0] == 0x07 && data.data[1] == 0x19 && data.data[2] == 0x01) {
+                    auto it = airpodsMap.find(data.data[5]);
+                    if (it != airpodsMap.end()) {
+                      static bool init = true;
+                      static uint8_t left_state = 0, right_state = 0, left_battery, right_battery, case_battery;
+                      static uint16_t model;
+                      static uint8_t changed;
+                      changed = 0xFF;
+                      uint8_t charging = data.data[7] >> 4;
+
+                      if (init) {
+                        char buffer[7];
+
+                        model = (uint16_t) data.data[4] << 8 | data.data[3];
+                        snprintf(buffer, sizeof(buffer), "0x%04x", model);
+                        id(${airpods_id_prefix}_device_model).publish_state(buffer);
+
+                        snprintf(buffer, sizeof(buffer), "0x%02x", data.data[9]);
+                        id(${airpods_id_prefix}_device_color).publish_state(buffer);
+                      }
+
+                      if ((it->second & RL) != 0 && model != 0x200a) {
+                        data.data[6] = (data.data[6] << 4) | (data.data[6] >> 4);
+                        charging = (charging & ~0x03) | ((charging & 0x01) << 1) | ((charging & 0x02) >> 1);
+                      }
+
+                      left_battery = (data.data[6] >> 4) * 10;
+                      if (left_battery != UNKNOWN_BATTERY && id(${airpods_id_prefix}_left_battery).state != left_battery)
+                        id(${airpods_id_prefix}_left_battery).publish_state(changed = left_battery);
+                      right_battery = (data.data[6] & 0x0F) * 10;
+                      if (right_battery != UNKNOWN_BATTERY && id(${airpods_id_prefix}_right_battery).state != right_battery)
+                        id(${airpods_id_prefix}_right_battery).publish_state(changed = right_battery);
+                      case_battery = (data.data[7] & 0x0F) * 10;
+                      if (case_battery != UNKNOWN_BATTERY && id(${airpods_id_prefix}_case_battery).state != case_battery)
+                        id(${airpods_id_prefix}_case_battery).publish_state(changed = case_battery);
+
+                      uint8_t state = (it->second & L_MASK);
+                      if (state != 0 && state != left_state)
+                        id(${airpods_id_prefix}_left_state).publish_state(std::to_string(changed = left_state = state));
+                      state = ((it->second >> 2) & L_MASK);
+                      if (state != 0 && state != right_state)
+                        id(${airpods_id_prefix}_right_state).publish_state(std::to_string(changed = right_state = state));
+
+                      if (init || id(${airpods_id_prefix}_case_battery_state).state != ((charging & 0x04) != 0))
+                        id(${airpods_id_prefix}_case_battery_state).publish_state((changed = charging & 0x04) != 0);
+                      if (init || id(${airpods_id_prefix}_left_battery_state).state != ((charging & 0x02) != 0))
+                        id(${airpods_id_prefix}_left_battery_state).publish_state((changed = charging & 0x02) != 0);
+                      if (init || id(${airpods_id_prefix}_right_battery_state).state != ((charging & 0x01) != 0))
+                        id(${airpods_id_prefix}_right_battery_state).publish_state((changed = charging & 0x01) != 0);
+
+                      if (changed != 0xFF)
+                        ESP_LOGD("airpods", "Changed state 0x%02X/%1X:%1X/%1X:%1X %s", data.data[5], data.data[6] >> 4, data.data[6] & 0x0F, data.data[7] >> 4, data.data[7] & 0x0F, (it->second & RL) != 0 ? "RL" : "lr");
+                      if (init)
+                        init = false;
+                    } else
+                      ESP_LOGD("airpods", "Unknown state 0x%02X/%1X:%1X/%1X:%1X", data.data[5], data.data[6] >> 4, data.data[6] & 0x0F, data.data[7] >> 4, data.data[7] & 0x0F);
+                    //ESP_LOGD("airpods", "%s/%d: %s", data.uuid.to_string().c_str(), data.data.size(), format_hex_pretty(data.data).c_str());
+                  } else
+                    ESP_LOGW("airpods", "Unknown payload %s/%d: %s", data.uuid.to_string().c_str(), data.data.size(), format_hex_pretty(data.data).c_str());
+
+binary_sensor:
+  - platform: template
+    id: ${airpods_id_prefix}_case_battery_state
+    name: ${airpods_name_prefix} Case Battery State
+    <<: &airpods_binary_sensor_battery_state
+      device_class: battery_charging
+      disabled_by_default: true
+
+  - platform: template
+    id: ${airpods_id_prefix}_left_battery_state
+    name: ${airpods_name_prefix} Left Battery State
+    <<: *airpods_binary_sensor_battery_state
+
+  - platform: template
+    id: ${airpods_id_prefix}_right_battery_state
+    name: ${airpods_name_prefix} Right Battery State
+    <<: *airpods_binary_sensor_battery_state
+
+sensor:
+  - platform: template
+    id: ${airpods_id_prefix}_case_battery
+    name: ${airpods_name_prefix} Case Battery
+    <<: &airpods_sensor_battery
+      device_class: battery
+      unit_of_measurement: '%'
+      state_class: measurement
+      accuracy_decimals: 0
+
+  - platform: template
+    id: ${airpods_id_prefix}_left_battery
+    name: ${airpods_name_prefix} Left Battery
+    <<: *airpods_sensor_battery
+
+  - platform: template
+    id: ${airpods_id_prefix}_right_battery
+    name: ${airpods_name_prefix} Right Battery
+    <<: *airpods_sensor_battery
+
+text_sensor:
+  - platform: template
+    id: ${airpods_id_prefix}_device_model
+    name: ${airpods_name_prefix} Device Model
+    icon: mdi:earbuds
+    disabled_by_default: true
+    filters:
+      - map:
+        - 0x2002 -> AirPods (1st gen)
+        - 0x2003 -> Powerbeats³
+        - 0x2005 -> BeatsX
+        - 0x2006 -> Beats Solo³
+        - 0x200a -> AirPods Max (Lightning)
+        - 0x200e -> AirPods Pro (1st gen)
+        - 0x200f -> AirPods (2nd gen)
+        - 0x2014 -> AirPods Pro 2 (Lightning, previously 2nd gen)
+        - 0x2024 -> AirPods Pro 2 (USB-C, previously 2nd gen)
+
+  - platform: template
+    id: ${airpods_id_prefix}_device_color
+    name: ${airpods_name_prefix} Device Color
+    icon: mdi:earbuds
+    disabled_by_default: true
+    filters:
+      - map:
+        - 0x00 -> White
+        - 0x01 -> Black
+        - 0x02 -> Red
+        - 0x03 -> Blue
+        - 0x04 -> Pink
+        - 0x05 -> Gray
+        - 0x06 -> Silver
+        - 0x07 -> Gold
+        - 0x08 -> Rose Gold
+        - 0x09 -> Space Gray
+        - 0x0a -> Dark Blue
+        - 0x0b -> Light Blue
+        - 0x0c -> Yellow
+        - 0x11 -> Green
+
+  - platform: template
+    id: ${airpods_id_prefix}_left_state
+    name: ${airpods_name_prefix} Left State
+    <<: &airpods_text_sensor_state
+      icon: mdi:earbuds
+      disabled_by_default: true
+      filters:
+        - map:
+          - 1 -> In Case
+          - 2 -> On Air
+          - 3 -> In Ear
+
+  - platform: template
+    id: ${airpods_id_prefix}_right_state
+    name: ${airpods_name_prefix} Right State
+    <<: *airpods_text_sensor_state
