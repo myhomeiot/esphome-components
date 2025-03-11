@@ -56,6 +56,8 @@ ble_gateway:
 
 #### Home Assistant Passive BLE Monitor configuration example
 Note: Remove automation if you use direct `ble_monitor.parse_data` service call
+
+Note: If you use automation, don't forget to exclude it from Home Assistant recorder.
 ```yaml
 ble_monitor:
   discovery: false
