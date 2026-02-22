@@ -34,7 +34,7 @@ void MyHomeIOT_BLEHost::loop() {
     this->set_state(esp32_ble_tracker::ClientState::INIT);
     return;
   }
-  if (this->state_ == esp32_ble_tracker::ClientState::INIT)
+  if (this->state() == esp32_ble_tracker::ClientState::INIT)
     init();
 #endif
 
