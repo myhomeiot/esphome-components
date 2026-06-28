@@ -45,12 +45,12 @@ template:
         attributes:
           discovery: "{{ is_state('input_boolean.settings_ble_gateway_discovery', 'on') }}"
           devices: >-
-            {% set devices = namespace(items = []) %}
-            {% for s in states | selectattr('entity_id', 'search', '^(device_tracker|sensor).ble_') | map(attribute='entity_id') %}
-              {% set devices.items = devices.items + [device_id(s)] %}
-            {% endfor %}
             {% set ns = namespace(items = []) %}
-            {% for s in devices.items | unique %}
-              {% set ns.items = ns.items + [(device_attr(s, 'identifiers') | first)[1]] %}
+            {% for entity_id in integration_entities('ble_monitor') | select('match', '^(device_tracker|sensor)\.') | map('device_id') | unique %}
+              {% for ident in device_attr(entity_id, 'identifiers') %}
+                {% if ':' in ident[1] %}
+                  {% set ns.items = ns.items + [ident[1]] %}
+                {% endif %}
+              {% endfor %}
             {% endfor %}
-            {{ ns.items | unique | sort | join('') | replace(':', '') ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}
+            {{ (ns.items | unique | sort | join('') | replace(':', '')) ~ (states('input_text.settings_ble_gateway_add_device') | replace(':', '') | trim) if is_state('binary_sensor.ble_gateway', 'on') }}
